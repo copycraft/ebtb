@@ -970,3 +970,344 @@ body.ebtb-skin .ebtb-footer a:hover { color: var(--garlic-300); }
   .ebtb-thankyou .ebtb-secure { display: none; }
   body.ebtb-skin ul.order_details li { flex-basis: 50%; border-right: 0; border-bottom: 2px dashed var(--sesame-500); }
 }
+
+/* ---------------------------------------------------------------- order tracking page */
+body.ebtb-tracking {
+  margin: 0;
+  background: var(--sesame-200);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+.ebtb-tracking__main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: clamp(48px, 7vw, 96px) clamp(16px, 4vw, 56px);
+}
+.ebtb-tracking__main .woocommerce {
+  width: 100%;
+  max-width: 480px;
+}
+.ebtb-tracking__main h1 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: -0.02em;
+  font-size: clamp(32px, 4.5vw, 48px);
+  line-height: 1.1;
+  color: var(--poppy-800);
+  margin: 0 0 8px;
+  text-align: center;
+}
+.ebtb-tracking__main > p:first-of-type {
+  color: var(--poppy-700);
+  font-size: 18px;
+  line-height: 1.6;
+  text-align: center;
+  margin: 0 0 32px;
+}
+.ebtb-tracking__main .woocommerce-form-login-toggle,
+.ebtb-tracking__main .woocommerce-form-login-toggle a {
+  color: var(--blaze-600);
+  font-size: 15px;
+}
+.ebtb-tracking__main .woocommerce-form-login-toggle a:hover {
+  color: var(--blaze-700);
+}
+.ebtb-tracking__main form.woocommerce-form-track-order {
+  background: var(--salt-100);
+  border: 2px solid var(--poppy-800);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sticker);
+  padding: 32px;
+}
+.ebtb-tracking__main .woocommerce-form-track-order p.form-row {
+  margin: 0 0 16px;
+}
+.ebtb-tracking__main .woocommerce-form-track-order label {
+  font-family: var(--font-ui);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  font-size: 11px;
+  color: var(--poppy-800);
+  line-height: 1.3;
+  display: block;
+  margin-bottom: 8px;
+}
+.ebtb-tracking__main .woocommerce-form-track-order .input-text {
+  width: 100%;
+  min-height: 50px;
+  padding: 0 18px;
+  border: 2px solid var(--poppy-800);
+  border-radius: var(--radius-pill);
+  background: var(--salt-100);
+  color: var(--poppy-800);
+  font-family: var(--font-mono);
+  font-size: 16px;
+  letter-spacing: 0.08em;
+  box-sizing: border-box;
+  box-shadow: none;
+  transition: box-shadow .12s var(--ease-snap), background-color .12s var(--ease-snap);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.ebtb-tracking__main .woocommerce-form-track-order .input-text::placeholder {
+  font-family: var(--font-ui);
+  font-size: 14px;
+  letter-spacing: 0;
+  color: var(--grey-500);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.ebtb-tracking__main .woocommerce-form-track-order .input-text:focus {
+  background-color: var(--salt-000);
+  box-shadow: 0 0 0 3px var(--poppy-300);
+  outline: none;
+}
+.ebtb-tracking__main .woocommerce-form-track-order button.button {
+  width: 100%;
+  min-height: 62px;
+  font-family: var(--font-ui);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  font-size: 15px;
+  border: 2px solid var(--poppy-800);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-sticker-lg);
+  background-color: var(--blaze-500);
+  color: var(--salt-100);
+  cursor: pointer;
+  transition: transform .12s var(--ease-snap), box-shadow .12s var(--ease-snap), background-color .12s var(--ease-snap), filter .12s var(--ease-snap);
+}
+.ebtb-tracking__main .woocommerce-form-track-order button.button:hover {
+  filter: brightness(.94);
+  border-color: var(--poppy-800);
+}
+.ebtb-tracking__main .woocommerce-form-track-order button.button:active {
+  transform: translate(2px, 2px);
+  box-shadow: var(--shadow-pressed);
+}
+.ebtb-tracking__footer {
+  clear: both;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  justify-content: center;
+  padding: 24px 16px 32px;
+  border-top: 2px solid var(--poppy-800);
+  background: var(--poppy-800);
+  color: var(--sesame-200);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+}
+.ebtb-tracking__footer a { color: var(--sesame-200); text-decoration: none; }
+.ebtb-tracking__footer a:hover { color: var(--garlic-300); }
+.ebtb-tracking__main .woocommerce-error,
+.ebtb-tracking__main .woocommerce-message,
+.ebtb-tracking__main .woocommerce-info {
+  border: 2px solid var(--poppy-800);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sticker);
+  color: var(--poppy-800);
+  font-weight: 500;
+  padding: 16px 20px;
+  margin-bottom: 24px;
+}
+.ebtb-tracking__main .woocommerce-error { background: var(--blaze-100); }
+.ebtb-tracking__main .woocommerce-message { background: var(--scallion-100); }
+
+/* Match order-received page style for tracking page */
+body.ebtb-tracking .ebtb-header {
+  background: var(--salt-100);
+}
+body.ebtb-tracking .ebtb-header .ebtb-ticker {
+  border-top: 2px solid var(--poppy-800);
+}
+body.ebtb-tracking .ebtb-header__inner .ebtb-wordmark {
+  display: inline-block;
+  margin: 0;
+}
+body.ebtb-tracking .ebtb-header__inner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  max-width: 1240px;
+  min-height: 72px;
+  margin: 0 auto;
+  padding: 0 clamp(16px, 4vw, 56px);
+}
+body.ebtb-tracking .ebtb-tracking__main {
+  padding: 48px clamp(16px, 4vw, 56px) 64px;
+}
+body.ebtb-tracking .ebtb-tracking__main .woocommerce {
+  max-width: 760px;
+  margin: 0 auto;
+}
+body.ebtb-tracking .ebtb-tracking__main .woocommerce::before {
+  content: "Rendelés követés";
+  display: inline-block;
+  margin-bottom: 18px;
+  padding: 7px 14px;
+  border: 2px solid var(--poppy-800);
+  border-radius: var(--radius-pill);
+  background: var(--scallion-500);
+  box-shadow: var(--shadow-sticker-sm);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  transform: rotate(-2deg);
+}
+
+/* Order tracking page — match thank-you page styles */
+body.ebtb-tracking .woocommerce-order-details {
+  background: var(--salt-100);
+  border: 2px solid var(--poppy-800);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sticker);
+  padding: 24px;
+  margin-bottom: 24px;
+}
+body.ebtb-tracking .woocommerce-customer-details {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 0;
+  margin-bottom: 24px;
+}
+body.ebtb-tracking .woocommerce-order section section {
+  border: 0;
+  box-shadow: none;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+}
+body.ebtb-tracking .woocommerce-order table.shop_table,
+body.ebtb-tracking .woocommerce-order table.shop_table tr {
+  border: 0;
+  border-radius: 0;
+  margin: 0;
+  background: transparent !important;
+}
+body.ebtb-tracking .woocommerce-order table.shop_table th,
+body.ebtb-tracking .woocommerce-order table.shop_table td {
+  border: 0;
+  border-bottom: 1.5px solid var(--sesame-500);
+  background: transparent !important;
+  padding: 12px 0;
+  text-align: left;
+  vertical-align: top;
+}
+body.ebtb-tracking .woocommerce-order table.shop_table td:last-child,
+body.ebtb-tracking .woocommerce-order table.shop_table th:last-child {
+  text-align: right;
+}
+body.ebtb-tracking .woocommerce-order table.shop_table thead th {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  color: var(--grey-500);
+}
+body.ebtb-tracking .woocommerce-order table.shop_table .product-name a {
+  color: var(--poppy-800);
+  font-weight: 700;
+  text-decoration: none;
+}
+body.ebtb-tracking .woocommerce-order table.shop_table .product-quantity {
+  font-family: var(--font-mono);
+  font-weight: 500;
+}
+body.ebtb-tracking .woocommerce-order table.shop_table tfoot tr:last-child th,
+body.ebtb-tracking .woocommerce-order table.shop_table tfoot tr:last-child td {
+  font-size: 18px;
+  font-weight: 900;
+  border-top: 2px solid var(--poppy-800);
+  border-bottom: 0;
+  padding-top: 16px;
+}
+body.ebtb-tracking .woocommerce-order table.shop_table tfoot tr:last-child th {
+  text-transform: uppercase;
+}
+body.ebtb-tracking .woocommerce-order table.shop_table small.shipped_via {
+  display: block;
+  font-size: 13px;
+  color: var(--grey-500);
+}
+body.ebtb-tracking .woocommerce-order .woocommerce-columns--addresses {
+  float: none;
+  width: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 24px;
+}
+body.ebtb-tracking .woocommerce-order .woocommerce-columns--addresses::before,
+body.ebtb-tracking .woocommerce-order .woocommerce-columns--addresses::after {
+  display: none;
+}
+body.ebtb-tracking .woocommerce-order .woocommerce-column {
+  float: none;
+  width: auto;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+}
+body.ebtb-tracking .woocommerce-order .woocommerce-column__title {
+  font-size: 14px !important;
+  margin: 0 0 8px;
+}
+body.ebtb-tracking .woocommerce-order .woocommerce-customer-details--email {
+  margin: 8px 0 0;
+  color: var(--grey-500);
+}
+body.ebtb-tracking .woocommerce-order .amount {
+  font-family: var(--font-mono);
+  font-weight: 500;
+}
+body.ebtb-tracking .woocommerce-order address {
+  border: 0;
+  padding: 0;
+  font-style: normal;
+  line-height: 1.6;
+}
+
+/* Ensure address content is visually contained within the column box */
+body.ebtb-tracking .woocommerce-customer-details .woocommerce-column {
+  background: var(--salt-100);
+  border: 2px solid var(--poppy-800);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  margin-bottom: 16px;
+}
+body.ebtb-tracking .woocommerce-customer-details .woocommerce-column__title {
+  font-family: var(--font-ui);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  font-size: 12px;
+  color: var(--poppy-800);
+  margin: 0 0 12px;
+  padding-bottom: 8px;
+  border-bottom: 1.5px solid var(--sesame-500);
+}
+body.ebtb-tracking .woocommerce-customer-details address {
+  font-family: var(--font-ui);
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--poppy-800);
+}
+body.ebtb-tracking .woocommerce-customer-details address br {
+  display: block;
+  content: "";
+  margin-bottom: 4px;
+}

@@ -98,6 +98,10 @@ add_filter('template_include', function ($template) {
     if (function_exists('is_order_received_page') && is_order_received_page()) {
         return WPMU_PLUGIN_DIR . '/ebtb-skin/order-received.php';
     }
+    // Order tracking page: clean EBTB skin without ticker
+    if (is_page('megrendeles-kovetese')) {
+        return WPMU_PLUGIN_DIR . '/ebtb-skin/order-tracking.php';
+    }
     return $template;
 }, 200);
 
@@ -122,6 +126,15 @@ function ebtb_product_tone($product)
     $sku = $product ? $product->get_sku() : '';
     return $tones[$sku] ?? 'blaze';
 }
+
+// --- Favicon: match Next.js site
+add_action('wp_head', function () {
+    $icon_url = WPMU_PLUGIN_URL . '/ebtb-skin/icon.png';
+    $icon16_url = WPMU_PLUGIN_URL . '/ebtb-skin/icon-16.png';
+    printf('<link rel="icon" type="image/png" sizes="32x32" href="%s">', esc_url($icon_url));
+    printf('<link rel="icon" type="image/png" sizes="16x16" href="%s">', esc_url($icon16_url));
+    printf('<link rel="apple-touch-icon" href="%s">', esc_url($icon_url));
+}, 1);
 
 function ebtb_product_tile($product)
 {
