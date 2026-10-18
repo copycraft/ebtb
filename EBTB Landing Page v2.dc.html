@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/ebtb-design-system-c7b8b172-c923-456a-aefe-ee40920cd6e9/tokens/fonts.css" />
+<link rel="stylesheet" href="_ds/ebtb-design-system-c7b8b172-c923-456a-aefe-ee40920cd6e9/tokens/colors.css" />
+<link rel="stylesheet" href="_ds/ebtb-design-system-c7b8b172-c923-456a-aefe-ee40920cd6e9/tokens/typography.css" />
+<link rel="stylesheet" href="_ds/ebtb-design-system-c7b8b172-c923-456a-aefe-ee40920cd6e9/tokens/spacing.css" />
+<link rel="stylesheet" href="_ds/ebtb-design-system-c7b8b172-c923-456a-aefe-ee40920cd6e9/tokens/radius.css" />
+<link rel="stylesheet" href="_ds/ebtb-design-system-c7b8b172-c923-456a-aefe-ee40920cd6e9/tokens/shadow.css" />
+<link rel="stylesheet" href="_ds/ebtb-design-system-c7b8b172-c923-456a-aefe-ee40920cd6e9/tokens/motion.css" />
+<link rel="stylesheet" href="_ds/ebtb-design-system-c7b8b172-c923-456a-aefe-ee40920cd6e9/tokens/base.css" />
+<link rel="stylesheet" href="_ds/ebtb-design-system-c7b8b172-c923-456a-aefe-ee40920cd6e9/styles.css" />
+<script src="_ds/ebtb-design-system-c7b8b172-c923-456a-aefe-ee40920cd6e9/_ds_bundle.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin: 0; background: #F6ECD9; color: #241C33; font-family: "Archivo", system-ui, sans-serif; }
+  a { color: #FF4A1E; text-decoration: none; }
+  a:hover { color: #241C33; }
+  :focus-visible { outline: 3px solid #6B3FD4; outline-offset: 2px; }
+  ::selection { background: #A8D45A; color: #241C33; }
+  html { scroll-behavior: smooth; }
+  html { scrollbar-color: #FF4A1E #F6ECD9; scrollbar-width: thin; }
+  ::-webkit-scrollbar { width: 14px; height: 14px; }
+  ::-webkit-scrollbar-track { background: #F6ECD9; border-left: 2px solid #241C33; }
+  ::-webkit-scrollbar-thumb { background: #FF4A1E; border: 2px solid #241C33; border-radius: 999px; }
+  ::-webkit-scrollbar-thumb:hover { background: #241C33; }
+  ::-webkit-scrollbar-corner { background: #F6ECD9; }
+  section[id] { scroll-margin-top: 86px; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  [data-reveal] { opacity: 0; transform: translateY(26px); transition: opacity .5s cubic-bezier(.2,.9,.25,1), transform .5s cubic-bezier(.2,.9,.25,1); }
+  [data-reveal].in { opacity: 1; transform: none; }
+  @keyframes ebtb-wobble { 0%,100% { transform: rotate(-6deg) } 50% { transform: rotate(4deg) translateY(-3px) } }
+  @keyframes ebtb-float { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-12px) } }
+  @keyframes ebtb-pop { 0% { transform: scale(.86) rotate(-3deg); opacity: 0 } 70% { transform: scale(1.04) rotate(1deg); opacity: 1 } 100% { transform: none; opacity: 1 } }
+  @keyframes ebtb-fall { 0% { transform: translateY(-14px) scale(.6); opacity: 0 } 25% { opacity: 1 } 100% { transform: translateY(58px) scale(1); opacity: 0 } }
+  .ebtb-wobble { animation: ebtb-wobble 4.5s ease-in-out infinite; transform-origin: 50% 50%; }
+  .ebtb-float { animation: ebtb-float 7s ease-in-out infinite; }
+  .ebtb-pop { animation: ebtb-pop .6s cubic-bezier(.2,.9,.25,1) both; }
+  .ebtb-seed { animation: ebtb-fall 2.6s linear infinite; }
+  @media (prefers-reduced-motion: reduce) {
+    [data-reveal] { opacity: 1 !important; transform: none !important; transition: none !important; }
+    .ebtb-wobble, .ebtb-float, .ebtb-pop, .ebtb-seed { animation: none !important; }
+  }
+</style>
+</helmet>
+<div style="min-height:100vh;display:flex;flex-direction:column;overflow-x:hidden">
+  <div aria-hidden="true" style="position:fixed;top:0;left:0;right:0;height:6px;background:rgba(36,28,51,.18);z-index:60;pointer-events:none">
+    <div data-scroll-progress="1" style="height:100%;width:0%;background:#FF4A1E;border-right:2px solid #241C33"></div>
+  </div>
+
+  <x-import component-from-global-scope="EBTBDesignSystem_c7b8b1.Marquee" tone="scallion" items="{{ tickerItems }}" speed="32" hint-size="100%,44px"></x-import>
+  <x-import component-from-global-scope="EBTBDesignSystem_c7b8b1.NavBar" links="{{ navLinks }}" active="Bolt" cart-count="0" cta="Vásárlás" hint-size="100%,74px"></x-import>
+
+  <section data-screen-label="Hero" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));background:#6B3FD4;border-bottom:2px solid #241C33;position:relative">
+    <div style="padding:clamp(32px,5vw,72px) clamp(16px,4vw,56px);display:flex;flex-direction:column;gap:24px;justify-content:center;color:#FFFDF7">
+      <div class="ebtb-wobble" style="align-self:flex-start">
+        <x-import component-from-global-scope="EBTBDesignSystem_c7b8b1.Badge" tone="garlic" size="md" hint-size="240px,34px">Kis tétel · nagy szórás</x-import>
+      </div>
+      <h1 class="ebtb-pop" style="margin:0;font-family:'Bagel Fat One',sans-serif;font-weight:400;font-size:clamp(46px,6.4vw,96px);line-height:.92;letter-spacing:-.02em;color:#FFCB61;text-shadow:6px 6px 0 #241C33">Minden, csak<br />a bagel nem</h1>
+      <p style="margin:0;max-width:44ch;font-size:19px;line-height:1.5">Hat pirított összetevő egy tégelyben. Szórd rántottára, avokádóra, túróra, salátára — bármire, ami nem bagel.</p>
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
+        <span style="display:inline-flex;transition:transform .12s cubic-bezier(.2,.9,.25,1)" style-hover="transform:translate(-3px,-3px) rotate(-1deg)"><x-import component-from-global-scope="EBTBDesignSystem_c7b8b1.Button" size="lg" as="a" href="#bolt" hint-size="200px,54px">Megveszem</x-import></span>
+        <span style="display:inline-flex;transition:transform .12s cubic-bezier(.2,.9,.25,1)" style-hover="transform:translate(-3px,-3px) rotate(-1deg)"><x-import component-from-global-scope="EBTBDesignSystem_c7b8b1.Button" size="lg" variant="outline" as="a" href="#keverek" hint-size="200px,54px">Mi van benne?</x-import></span>
+      </div>
+      <x-import component-from-global-scope="EBTBDesignSystem_c7b8b1.SpecStrip" align="left" items="{{ heroSpecs }}" style="color:#E6DDFB;border-color:rgba(255,253,247,.3);max-width:480px" hint-size="440px,42px"></x-import>
+    </div>
+    <div style="padding:clamp(24px,3vw,48px);display:grid;place-items:center;position:relative">
+      <div class="ebtb-float" style="width:100%;max-width:420px;position:relative">
+        <x-import component-from-global-scope="EBTBDesignSystem_c7b8b1.Photo" shape="arch" ratio="4 / 5" label="Nyitott tégely, szórás közben" style="width:100%" hint-size="380px,470px"></x-import>
+        <div style="position:absolute;bottom:-14px;left:-18px;pointer-events:none">
+          <x-import component-from-global-scope="EBTBDesignSystem_c7b8b1.Badge" tone="blaze" rotate="-8" hint-size="150px,34px">0 bagel</x-import>
+        </div>
+      </div>
+      <div aria-hidden="true" style="position:absolute;inset:0;pointer-events:none;overflow:hidden">
+        <sc-for list="{{ seeds }}" as="s" hint-placeholder-count="7">
+          <span class="ebtb-seed" style="{{ s.style }}"></span>
+        </sc-for>
+      </div>
+    </div>
+  </section>
+
+  <x-import component-from-global-scope="EBTBDesignSystem_c7b8b1.Marquee" tone="blaze" items="{{ claimItems }}" speed="28" hint-size="100%,44px"></x-import>
+
+  <section id="mi-ez" data-screen-label="Mi az EBTB" style="padding:clamp(48px,7vw,112px) clamp(16px,4vw,56px);display:flex;flex-direction:column;gap:32px;max-width:1360px;margin:0 auto;width:100%">
+    <div data-reveal="1">
+      <x-import component-from-global-scope="EBTBDesignSystem_c7b8b1.SectionHeading" eyebrow="Mi ez egyáltalán" title="Az everything bagel, tégelyben" align="left" hint-size="100%,140px">Szezám, mák, fokhagyma, hagyma, tengeri só és egy csipet chili. Sós, umamis, csendesen függőséget okozó — és Magyarországon eddig nem lehetett kapni.</x-import>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px;align-items:stretch">
+      <div data-reveal="1" style="height:100%">
+        <x-import component-from-global-scope="EBTBDesignSystem_c7b8b1.Card" tone="paper" padding="24px" lift="{{ yes }}" style="height:100%;display:flex;flex-direction:column" hint-size="100%,220px">
+          <p style="margin:0 0 12px;font-family:'DM Mono',monospace;font-size:13px;letter-spacing:.14em;color:#FF4A1E">01</p>
+          <h3 style="margin:0 0 10px;font-family:'Archivo',sans-serif;font-weight:900;font-stretch:expanded;text-transform:uppercase;letter-spacing:.02em;font-size:19px">Globális íz</h3>
+          <p style="margin:0;font-size:16px;line-height:1.5">Nem kell magyarázni. Aki egyszer megkóstolta, az keresi.</p>
+        </x-import>
+      </div>
+      <div data-reveal="1" style="height:100%">
+        <x-import component-from-global-scope="EBTBDesignSystem_c7b8b1.Card" tone="paper" padding="24px" lift="{{ yes }}" style="height:100%;display:flex;flex-direction:column" hint-size="100%,220px">
+          <p style="margin:0 0 12px;font-family:'DM Mono',monospace;font-size:13px;letter-spacing:.14em;color:#FF4A1E">02</p>
+          <h3 style="margin:0 0 10px;font-family:'Archivo',sans-serif;font-weight:900;font-stretch:expanded;text-transform:uppercase;letter-spacing:.02em;font-size:19px">Egy szórás, kész</h3>
+          <p style="margin:0;font-size:16px;line-height:1.5">Nem kell hozzá recept. Rárázod, és máris jobb lett.</p>
+        </x-import>
+      </div>
+      <div data-reveal="1" style="height:100%">
+        <x-import component-from-global-scope="EBTBDesignSystem_c7b8b1.Card" tone="paper" padding="24px" lift="{{ yes }}" style="height:100%;display:flex;flex-direction:column" hint-size="100%,220px">
+          <p style="margin:0 0 12px;font-family:'DM Mono',monospace;font-size:13px;letter-spacing:.14em;color:#FF4A1E">03</p>
+          <h3 style="margin:0 0 10px;font-family:'Archivo',sans-serif;font-weight:900;font-stretch:expanded;text-transform:uppercase;letter-spacing:.02em;font-size:19px">Nem csak reggelire</h3>
+          <p style="margin:0;font-size:16px;line-height:1.5">Rántottától a sült krumpliig — ugyanaz a tégely, egész nap.</p>
+        </x-import>
+      </div>
+    </div>
+  </section>
+
+  <section id="mire-jo" data-screen-label="Mire jó" style="background:#A8D45A;border-top:2px solid #241C33;border-bottom:2px solid #241C33;padding:clamp(48px,7vw,112px) clamp(16px,4vw,56px)">
+    <div style="max-width:1360px;margin:0 auto;display:flex;flex-direction:column;gap:32px">
+      <div data-reveal="1">
+        <x-import component-from-global-scope="EBTBDesignSystem_c7b8b1.SectionHeading" eyebrow="Öt ötlet kezdésnek" title="Mire szórd rá?" align="left" hint-size="100%,120px"></x-import>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px">
+        <sc-for list="{{ uses }}" as="u" hint-placeholder-count="5">
+          <figure data-reveal="1" style="margin:0;display:flex;flex-direction:column;gap:14px;transition:transform .22s cubic-bezier(.2,.9,.25,1)" style-hover="transform:translate(-3px,-5px)">
+            <x-import component-from-global-scope="EBTBDesignSystem_c7b8b1.Photo" shape="rounded" ratio="4 / 5" label="{{ u.shot }}" hint-size="100%,280px"></x-import>
+            <figcaption style="font-family:'Archivo',sans-serif;font-weight:900;font-stretch:expanded;text-transform:uppercase;letter-spacing:.02em;font-size:17px">{{ u.title }}</figcaption>
+          </figure>
+        </sc-for>
+      </div>
+    </div>
+  </section>
+
+  <section id="keverek" data-screen-label="A keverék" style="padding:clamp(48px,7vw,112px) clamp(16px,4vw,56px);max-width:1360px;margin:0 auto;width:100%;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:clamp(28px,4vw,56px);align-items:start">
+    <div data-reveal="1" style="display:flex;flex-direction:column;gap:24px">
+      <x-import component-from-global-scope="EBTBDesignSystem_c7b8b1.SectionHeading" eyebrow="Hat összetevő" title="A keverék" align="left" hint-size="100%,120px">Semmi titok. Pirítva az aromáért, durvára törve, hogy mindegyiket lásd. Töltőanyag, csomósodásgátló és cukor nélkül.</x-import>
+      <x-import component-from-global-scope="EBTBDesignSystem_c7b8b1.Photo" shape="rounded" ratio="16 / 10" label="Makrofotó — a keverék, látható magokkal" style="width:100%" hint-size="100%,300px"></x-import>
+    </div>
+    <div data-reveal="1">
+      <x-import component-from-global-scope="EBTBDesignSystem_c7b8b1.Card" tone="cream" padding="0" hint-size="100%,420px">
+        <ul style="list-style:none;margin:0;padding:8px 0">
+          <sc-for list="{{ blend }}" as="b" hint-placeholder-count="6">
+            <li onMouseEnter="{{ onBlendHover }}" data-name="{{ b.name }}" style="display:flex;align-items:baseline;justify-content:space-between;gap:16px;padding:18px 24px;border-bottom:1.5px solid #E8DBC1;cursor:default;transition:background .12s cubic-bezier(.2,.9,.25,1),padding-left .12s cubic-bezier(.2,.9,.25,1)" style-hover="background:#FFFDF7;padding-left:32px">
+              <span style="font-family:'Archivo',sans-serif;font-weight:900;font-stretch:expanded;text-transform:uppercase;letter-spacing:.02em;font-size:clamp(16px,1.5vw,20px)">{{ b.name }}</span>
+              <span style="font-family:'DM Mono',monospace;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#6B3FD4;text-align:right;white-space:nowrap">{{ b.note }}</span>
+            </li>
+          </sc-for>
+        </ul>
+        <div style="padding:20px 24px;display:flex;flex-wrap:wrap;gap:8px">
+          <x-import component-from-global-scope="EBTBDesignSystem_c7b8b1.Badge" tone="scallion" size="sm" hint-size="120px,28px">Gluténmentes</x-import>
+          <x-import component-from-global-scope="EBTBDesignSystem_c7b8b1.Badge" tone="paper" size="sm" hint-size="90px,28px">Vegán</x-import>
+          <x-import component-from-global-scope="EBTBDesignSystem_c7b8b1.Badge" tone="paper" size="sm" hint-size="130px,28px">Cukor nélkül</x-import>
+        </div>
+      </x-import>
+    </div>
+  </section>
+
+  <x-import component-from-global-scope="EBTBDesignSystem_c7b8b1.Marquee" tone="ink" items="{{ firstItems }}" speed="34" hint-size="100%,44px"></x-import>
+
+  <section id="bolt" data-screen-label="Bolt" style="background:#F7A81B;border-top:2px solid #241C33;border-bottom:2px solid #241C33;padding:clamp(48px,7vw,112px) clamp(16px,4vw,56px)">
+    <div style="max-width:1360px;margin:0 auto;display:flex;flex-direction:column;gap:32px">
+      <div data-reveal="1">
+        <x-import component-from-global-scope="EBTBDesignSystem_c7b8b1.SectionHeading" eyebrow="Elsőként a piacon" title="Válaszd ki a tiéd" align="left" hint-size="100%,120px"></x-import>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px">
+        <sc-for list="{{ products }}" as="p" hint-placeholder-count="4">
+          <div data-reveal="1" style="transition:transform .22s cubic-bezier(.2,.9,.25,1)" style-hover="transform:translate(-3px,-4px)">
+            <x-import component-from-global-scope="EBTBDesignSystem_c7b8b1.ProductCard" name="{{ p.name }}" price="{{ p.price }}" claim="{{ p.claim }}" badge="{{ p.badge }}" tone="{{ p.tone }}" specs="{{ p.specs }}" cta="Kosárba" on-add="{{ onAdd }}" hint-size="100%,400px"></x-import>
+          </div>
+        </sc-for>
+      </div>
+      <div data-reveal="1" style="display:flex;flex-wrap:wrap;align-items:center;gap:14px">
+        <x-import component-from-global-scope="EBTBDesignSystem_c7b8b1.Button" size="lg" variant="ink" as="a" href="{{ shopHref }}" hint-size="240px,54px">Tovább a kosárhoz</x-import>
+        <p style="margin:0;font-family:'DM Mono',monospace;font-size:12px;letter-spacing:.12em;text-transform:uppercase">{{ cartNote }}</p>
+      </div>
+    </div>
+  </section>
+
+  <sc-if value="{{ showWaitlist }}" hint-placeholder-val="{{ true }}">
+    <section data-screen-label="Feliratkozás" style="padding:clamp(48px,7vw,96px) clamp(16px,4vw,56px);display:grid;place-items:center">
+      <div data-reveal="1" style="width:100%;max-width:620px">
+        <x-import component-from-global-scope="EBTBDesignSystem_c7b8b1.Card" tone="onion" padding="clamp(24px,4vw,40px)" hint-size="100%,260px">
+          <h2 style="margin:0 0 12px;font-family:'Bagel Fat One',sans-serif;font-weight:400;font-size:clamp(32px,4vw,44px);line-height:.92;color:#FFCB61">Receptek, újdonságok</h2>
+          <p style="margin:0 0 20px;color:#FFFDF7;font-size:17px;line-height:1.5;max-width:44ch">Havonta egy levél: mire szórtuk rá, és mi jön legközelebb.</p>
+          <form onSubmit="{{ onSubmit }}" style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
+            <div style="flex:1 1 220px;min-width:0">
+              <x-import component-from-global-scope="EBTBDesignSystem_c7b8b1.Input" label="E-mail cím" type="email" required="1" placeholder="te@email.hu" hint-size="100%,72px"></x-import>
+            </div>
+            <x-import component-from-global-scope="EBTBDesignSystem_c7b8b1.Button" variant="garlic" size="md" hint-size="150px,46px">Feliratkozom</x-import>
+          </form>
+          <p style="margin:14px 0 0;font-family:'DM Mono',monospace;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#E6DDFB;min-height:16px">{{ formNote }}</p>
+        </x-import>
+      </div>
+    </section>
+  </sc-if>
+
+  <footer data-screen-label="Footer" style="background:#241C33;color:#FFFDF7;border-top:2px solid #241C33;padding:clamp(40px,6vw,80px) clamp(16px,4vw,56px) 28px;overflow:hidden">
+    <div style="max-width:1360px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:clamp(24px,4vw,48px)">
+      <div style="grid-column:1/-1">
+        <p style="margin:0;font-family:'Bagel Fat One',sans-serif;font-weight:400;font-size:clamp(56px,13vw,168px);line-height:.86;letter-spacing:-.02em;color:#F7A81B">EBTB</p>
+        <p style="margin:8px 0 0;font-family:'DM Mono',monospace;font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:#A8D45A">Minden, csak a bagel nem</p>
+      </div>
+      <sc-for list="{{ footerColumns }}" as="col" hint-placeholder-count="3">
+        <nav style="display:flex;flex-direction:column;gap:10px;align-content:start">
+          <p style="margin:0 0 4px;font-family:'DM Mono',monospace;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,253,247,.55)">{{ col.title }}</p>
+          <sc-for list="{{ col.links }}" as="l" hint-placeholder-count="4">
+            <a href="#bolt" style="color:#FFFDF7;font-size:16px;width:fit-content;transition:transform .12s cubic-bezier(.2,.9,.25,1),color .12s cubic-bezier(.2,.9,.25,1)" style-hover="color:#F7A81B;transform:translateX(4px)">{{ l }}</a>
+          </sc-for>
+        </nav>
+      </sc-for>
+      <nav style="display:flex;flex-direction:column;gap:10px;align-content:start">
+        <p style="margin:0 0 4px;font-family:'DM Mono',monospace;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,253,247,.55)">Máshol</p>
+        <a href="https://instagram.com" target="_blank" rel="noopener" style="color:#FFFDF7;font-size:16px;width:fit-content;transition:transform .12s cubic-bezier(.2,.9,.25,1),color .12s cubic-bezier(.2,.9,.25,1)" style-hover="color:#F7A81B;transform:translateX(4px)">Instagram</a>
+        <a href="https://tiktok.com" target="_blank" rel="noopener" style="color:#FFFDF7;font-size:16px;width:fit-content;transition:transform .12s cubic-bezier(.2,.9,.25,1),color .12s cubic-bezier(.2,.9,.25,1)" style-hover="color:#F7A81B;transform:translateX(4px)">TikTok</a>
+        <a href="#bolt" style="color:#FFFDF7;font-size:16px;width:fit-content;transition:transform .12s cubic-bezier(.2,.9,.25,1),color .12s cubic-bezier(.2,.9,.25,1)" style-hover="color:#F7A81B;transform:translateX(4px)">Webshop</a>
+      </nav>
+    </div>
+    <p style="max-width:1360px;margin:clamp(32px,5vw,56px) auto 0;padding-top:20px;border-top:1.5px solid rgba(255,253,247,.22);font-family:'DM Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,253,247,.6)">© 2026 EBTB — Jelenleg Magyarországra szállítunk — EU hamarosan — 0 bagel</p>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;shopHref&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;#bolt&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Links&quot;},&quot;showWaitlist&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Sections&quot;},&quot;animate&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Motion&quot;}}">
+class Component extends DCLogic {
+  state = { formNote: "", cartNote: "" };
+  componentDidMount() {
+    if (this.props.animate === false) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      document.querySelectorAll("[data-reveal]").forEach(n => n.classList.add("in"));
+      return;
+    }
+    const nodes = () => Array.from(document.querySelectorAll("[data-reveal]"));
+    this._io = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (e.isIntersecting) { e.target.classList.add("in"); this._io.unobserve(e.target); }
+      });
+    }, { rootMargin: "0px 0px -8% 0px", threshold: 0.05 });
+    nodes().forEach(n => this._io.observe(n));
+
+    const bar = document.querySelector("[data-scroll-progress]");
+    const progress = (ev) => {
+      if (!bar) return;
+      let el = document.scrollingElement || document.documentElement;
+      let top = el.scrollTop, max = el.scrollHeight - el.clientHeight;
+      if (max <= 0 && ev && ev.target && ev.target.scrollHeight) {
+        const t = ev.target === document ? (document.scrollingElement || document.documentElement) : ev.target;
+        top = t.scrollTop; max = t.scrollHeight - t.clientHeight;
+      }
+      bar.style.width = (max > 0 ? Math.min(100, Math.max(0, (top / max) * 100)) : 0) + "%";
+    };
+    this._progress = progress;
+    document.addEventListener("scroll", progress, { capture: true, passive: true });
+    window.addEventListener("resize", progress);
+    progress();
+
+    const rectCheck = () => {
+      const h = window.innerHeight || 800;
+      nodes().forEach(n => {
+        const r = n.getBoundingClientRect();
+        if (r.top < h * 0.95 && r.bottom > 0) n.classList.add("in");
+      });
+    };
+    let ticks = 0;
+    this._poll = setInterval(() => {
+      ticks++;
+      rectCheck();
+      progress();
+      if (ticks > 40) { clearInterval(this._poll); this._poll = null; }
+    }, 120);
+    rectCheck();
+    this._t = setTimeout(() => nodes().forEach(n => n.classList.add("in")), 1200);
+  }
+  componentWillUnmount() {
+    if (this._io) this._io.disconnect();
+    if (this._progress) {
+      document.removeEventListener("scroll", this._progress, { capture: true });
+      window.removeEventListener("resize", this._progress);
+    }
+    if (this._poll) clearInterval(this._poll);
+    clearTimeout(this._t);
+  }
+  renderVals() {
+    const seedColors = ["#241C33", "#FFCB61", "#FFFDF7", "#241C33", "#A8D45A", "#FFCB61", "#241C33"];
+    const seeds = seedColors.map((c, i) => ({
+      style: "position:absolute;top:" + (6 + i * 11) + "%;left:" + (8 + ((i * 27) % 80)) + "%;width:" + (4 + (i % 3) * 2) + "px;height:" + (4 + (i % 2) * 3) + "px;border-radius:999px;background:" + c + ";opacity:.55;animation-delay:" + (i * 0.42).toFixed(2) + "s"
+    }));
+    return {
+      yes: true,
+      seeds,
+      shopHref: this.props.shopHref ?? "#bolt",
+      showWaitlist: this.props.showWaitlist ?? true,
+      tickerItems: ["Ingyenes szállítás 15 000 Ft-tól", "Újdonság: Chili Everything", "Csak itt, a saját webshopunkban"],
+      claimItems: ["Szezám + mák + fokhagyma", "Bagel nélkül, mindig", "Kis tétel, nagy szórás", "Magyarország első EBTB-je"],
+      firstItems: ["Elsőként a piacon", "Mi definiáljuk a kategóriát", "Kompromisszumok nélkül", "0 bagel"],
+      navLinks: ["Bolt", "Mire jó", "A keverék", "Rólunk"],
+      heroSpecs: ["6 ÖSSZETEVŐ", "0 BAGEL", "2 NAP ALATT NÁLAD"],
+      uses: [
+        { title: "A reggeli rántottádra", shot: "Rántotta tányéron, felülről" },
+        { title: "A következő salátádba", shot: "Zöld saláta, közelkép" },
+        { title: "Friss túróra, gyümölccsel", shot: "Túró gyümölccsel, tálban" },
+        { title: "Sült zöldségekre", shot: "Sült zöldségek tepsiben" },
+        { title: "Dipekbe keverve", shot: "Krém tálban, kanállal" }
+      ],
+      blend: [
+        { name: "Pirított szezámmag", note: "Magvas — az alap" },
+        { name: "Mák", note: "Textúra — szín" },
+        { name: "Szárított fokhagyma", note: "Umami" },
+        { name: "Szárított hagyma", note: "Édes mélység" },
+        { name: "Tengeri só", note: "Pelyhes, durva" },
+        { name: "Chilipehely", note: "Egy kis csípősség" }
+      ],
+      products: [
+        { name: "Everything Blend", price: "3 490 Ft", claim: "Az eredeti. Nulla bagel.", badge: "Legkelendőbb", tone: "blaze", specs: ["65 g"] },
+        { name: "Extra Fokhagyma", price: "3 790 Ft", claim: "Akik komolyan gondolják.", badge: "", tone: "garlic", specs: ["65 g"] },
+        { name: "Chili Everything", price: "3 790 Ft", claim: "Az alap, lassú csípősséggel.", badge: "Új", tone: "onion", specs: ["65 g"] },
+        { name: "Utántöltő", price: "6 990 Ft", claim: "Négyszer annyi, kevesebb szemét.", badge: "", tone: "scallion", specs: ["250 g"] }
+      ],
+      footerColumns: [
+        { title: "Webshop", links: ["Keverékek", "Utántöltő", "Csomagok", "Kellékek"] },
+        { title: "Segítség", links: ["Szállítás", "Visszaküldés", "Kapcsolat"] },
+        { title: "EBTB", links: ["Rólunk", "Nagyker", "Állások"] }
+      ],
+      formNote: this.state.formNote,
+      cartNote: this.state.cartNote,
+      onSubmit: (e) => { e.preventDefault(); this.setState({ formNote: "Köszönjük — felkerültél a listára." }); },
+      onAdd: () => this.setState({ cartNote: "A kosárba került. Szórd rá bátran." }),
+      onBlendHover: () => {}
+    };
+  }
+}
+</script>
+</body>
+</html>

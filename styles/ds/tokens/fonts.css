@@ -1,0 +1,15 @@
+/* Webfonts. NOTE: no font binaries were supplied with the brief; these are the
+   nearest Google Fonts matches to the reference material (chunky rounded display +
+   grotesque UI + mono for label/nutrition data). Swap for licensed files when available. */
+/* Next.js app: the Google Fonts @import below was render-blocking (~0.9 s on mobile), so the fonts are
+   self-hosted with next/font in app/layout.tsx and wired into these tokens in app/globals.css.
+   Note: Google no longer serves "Archivo Expanded" (the request drops it), so headlines render in Archivo.
+@import url("https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=Archivo:wght@400;500;600;700;800;900&family=Archivo+Expanded:wght@700;800;900&family=DM+Mono:wght@400;500&display=swap");
+*/
+
+:root{
+  --font-display:"Bagel Fat One","Archivo Expanded",system-ui,sans-serif;
+  --font-headline:"Archivo Expanded","Archivo",system-ui,sans-serif;
+  --font-ui:"Archivo",system-ui,-apple-system,sans-serif;
+  --font-mono:"DM Mono",ui-monospace,monospace;
+}

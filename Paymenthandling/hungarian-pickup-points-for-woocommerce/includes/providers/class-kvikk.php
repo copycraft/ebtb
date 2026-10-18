@@ -1,0 +1,2040 @@
+<?php
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+use \Automattic\WooCommerce\Internal\DataStores\Orders\CustomOrdersTableController;
+
+class VP_Woo_Pont_Kvikk {
+	protected $api_url = 'https://api.kvikk.hu/v1/';
+	protected $api_key = '';
+	public $package_statuses = array();
+	public $package_statuses_tracking = array();
+	public $extra_services = array();
+
+	public function __construct() {
+		add_filter('vp_woo_pont_carrier_settings_kvikk', array($this, 'get_settings'));
+        add_action('vp_woo_pont_update_kvikk_list', array( $this, 'get_kvikk_db' ));
+        add_filter('vp_woo_pont_external_provider_groups', array($this, 'add_provider_group'));
+        add_filter('vp_woo_pont_get_supported_providers_for_home_delivery', array($this, 'add_provider_group_home_delivery'));
+		add_filter('vp_woo_pont_is_provider_configured', array($this, 'is_configured'), 10, 2);
+        add_filter('vp_woo_pont_get_supported_providers', array($this, 'add_providers'));
+        add_filter('vp_woo_pont_provider_subgroups', array($this, 'add_provider_subgroups'));
+        add_filter('vp_woo_pont_import_kvikk_manually', array( $this, 'get_kvikk_db_manually'));
+		add_action('wp_ajax_vp_woo_pont_validate_kvikk_api_key', array( $this, 'validate_api_key' ) );
+		add_filter('vp_woo_pont_merged_pdf_parameters', array($this, 'get_merged_pdf_parameters'), 10, 3);
+		add_filter('vp_woo_pont_tracking_page_variables', array($this, 'tracking_page_variables'), 10, 2);
+		add_filter('vp_woo_pont_email_order_details_params', array($this, 'tracking_email_variables'), 10, 2);
+		add_filter('vp_woo_pont_get_provider_name', array($this, 'get_provider_name'), 10, 3);
+
+		//Load custom admin JS
+		add_action('admin_enqueue_scripts', array($this, 'load_admin_scripts'));
+
+		//Create custom metabox
+		add_action('add_meta_boxes', array($this, 'add_metabox'), 10, 2);
+
+		//Set supported statuses
+		$this->package_statuses = array(
+			'booked' => 'Csomag létrehozva',
+			'sent' =>'Csomag átadva a futárnak',
+			'in_transit' => 'Csomag szállítás alatt',
+			'out_for_delivery' => 'Csomag kiszállítás alatt(címzettnek vagy csomagpontra)',
+			'ready_for_pickup' => 'Csomag kézbesítve csomagpontba vagy automatába',
+			'delivered' => 'Csomag kézbesítve / átvéve',
+			'failed' => 'Sikertelen kézbesítés',
+			'returned' => 'Visszaküldve a feladónak',
+		);
+
+		//Categorized for tracking page
+		$this->package_statuses_tracking = array(
+			'shipped' => array('booked', 'sent', 'in_transit'),
+			'delivery' => array('ready_for_pickup', 'out_for_delivery'),
+			'delivered' => array('delivered'),
+			'errors' => array('failed', 'returned')
+		);
+
+		$this->api_key = VP_Woo_Pont_Helpers::get_option('kvikk_api_key');
+		//$this->api_url = 'http://localhost:3001/v1/';
+
+		//Show promo
+		add_action( 'wp_ajax_vp_woo_pont_hide_kvikk_promo', array( $this, 'hide_ad' ) );
+		add_action('vp_woo_pont_metabox_before_content', array($this, 'display_ad'));
+		add_action('vp_woo_pont_providers_before_table', array($this, 'display_ad'));
+		add_action('vp_woo_pont_modal_generate_before_table', array($this, 'display_ad'));
+
+		//Process IPN request
+		add_action( 'init', array( __CLASS__, 'ipn_process' ), 11 );
+
+		//Handle QR scan
+		add_action('rest_api_init', array(__CLASS__, 'register_api_endpoints'));
+
+		//Show Foxpost & Packeta notice
+		add_action( 'woocommerce_update_options_shipping', array( $this, 'save_settings') );
+		add_action('admin_notices', array($this, 'show_foxpost_packeta_notice'));
+		add_action( 'wp_ajax_vp_woo_pont_kvikk_foxpost_packeta_notice', array( $this, 'hide_foxpost_packeta_notice' ) );
+
+		//Support multi-parcel shipments
+		add_action('vp_woo_pont_metabox_after_generate_options', array( $this, 'add_sender_id_field'));
+		add_action('vp_woo_pont_metabox_after_generate_options', array( $this, 'add_additional_package_fields'));
+		add_action('vp_woo_pont_metabox_after_generate_options', array( $this, 'add_extra_services_fields'));
+
+		//Automatic pricing
+		add_filter('vp_woo_pont_provider_costs', array($this, 'apply_auto_pricing'), 10, 2);
+		add_filter('woocommerce_package_rates', array($this, 'apply_auto_pricing_home_delivery'), 100, 2);
+
+		$this->extra_services = array(
+			'insurance' => __('Value insurance', 'vp-woo-pont'),
+			'oversized' => __('Bulky handling', 'vp-woo-pont'),
+			'amorf' => __('Amorf shaped package', 'vp-woo-pont'),
+			'fragile' => __('Fragile handling', 'vp-woo-pont'),
+			'nextday' => __('One business day time guarantee', 'vp-woo-pont'),
+		);
+
+	}
+	public function load_admin_scripts() {
+
+		wp_enqueue_script('vp-woo-pont-kvikk-admin', VP_Woo_Pont::$plugin_url.'assets/js/kvikk-admin.min.js', array('jquery'), VP_Woo_Pont::$version, true);
+		wp_localize_script('vp-woo-pont-kvikk-admin', 'vp_woo_pont_kvikk_params', array(
+			'couriers' => get_option('vp_woo_pont_kvikk_courier_details', array())
+		));
+	}
+
+	//Meta box on order page
+	public function add_metabox( $post_type, $post_or_order_object ) {
+		if ( class_exists( CustomOrdersTableController::class ) && function_exists( 'wc_get_container' ) && wc_get_container()->get( CustomOrdersTableController::class )->custom_orders_table_usage_is_enabled() ) {
+			$screen = wc_get_page_screen_id( 'shop-order' );
+		} else {
+			$screen = 'shop_order';
+		}
+		$order = ( $post_or_order_object instanceof \WP_Post ) ? wc_get_order( $post_or_order_object->ID ) : $post_or_order_object;
+		if(is_a( $order, 'WC_Order' )) {
+			if($order->get_meta('_vp_woo_pont_kvikk_accounting')) {
+				add_meta_box('vp_woo_pont_metabox_kvikk', __('Kvikk', 'vp-woo-pont'), array( $this, 'render_metabox_content' ), $screen, 'side');
+			}
+		}
+	}
+
+	//Render metabox content
+	public function render_metabox_content($post_or_order_object) {
+		$order = ( $post_or_order_object instanceof \WP_Post ) ? wc_get_order( $post_or_order_object->ID ) : $post_or_order_object;
+		if(apply_filters('vp_woo_pont_show_label_metabox', $order->needs_processing(), $order)) {
+			include( VP_Woo_Pont::$plugin_path . 'includes/views/html-metabox-kvikk.php' );
+		}
+	}
+
+	//Calculate shipping cost from Kvikk price list
+	public function apply_auto_pricing($provider_costs, $cart_details) {
+
+		//Check if auto pricing is enabled
+		if(VP_Woo_Pont_Helpers::get_option('kvikk_auto_pricing', 'no') !== 'yes') {
+			return $provider_costs;
+		}
+
+		//Load pricing data from JSON file
+		$pricing_index = $this->load_pricing_index();
+		if($pricing_index === false) {
+			return $provider_costs;
+		}
+
+		//Get customer country
+		$selected_country = WC()->customer->get_shipping_country();
+
+		//Get cart weight in grams
+		$weight = isset($cart_details['weight']) ? $cart_details['weight'] : 0;
+		$weight_in_grams = round(wc_get_weight($weight, 'g', get_option('woocommerce_weight_unit')));
+
+		//Map provider IDs to courier names used in the pricing JSON
+		$provider_courier_map = array(
+			'kvikk_mpl_posta' => 'mpl_posta',
+			'kvikk_mpl_postapont' => 'mpl_postapont',
+			'kvikk_mpl_automata' => 'mpl_automata',
+			'kvikk_packeta_zpont' => 'foxpost_zpont',
+			'kvikk_packeta_zbox' => 'foxpost_zbox',
+			'kvikk_foxpost' => 'foxpost_foxpost',
+			'kvikk_gls_locker' => 'gls_locker',
+			'kvikk_gls_shop' => 'gls_shop',
+			'kvikk_dpd_parcelshop' => 'dpd_parcelshop',
+			'kvikk_dpd_alzabox' => 'dpd_alzabox',
+			'kvikk_sameday_easybox' => 'sameday_easybox',
+			'kvikk_sameday_pickpackpont' => 'sameday_pickpackpont',
+		);
+
+		foreach($provider_costs as $provider_id => $cost_data) {
+
+			//Skip non-kvikk providers
+			if(!isset($provider_courier_map[$provider_id])) {
+				continue;
+			}
+
+			//If a price is already set manually(not 0), respect it as an overwrite
+			if(!$cost_data['is_default']) {
+				continue;
+			}
+
+			//Calculate the cost from the price list
+			$courier_name = $provider_courier_map[$provider_id];
+			$calculated_cost = $this->calculate_kvikk_shipping_cost($courier_name, $selected_country, $weight_in_grams, $pricing_index);
+
+			//If no price found, hide the provider
+			if($calculated_cost === false) {
+				unset($provider_costs[$provider_id]);
+				continue;
+			}
+
+			//Apply markup
+			$calculated_cost = $this->apply_pricing_markup($calculated_cost);
+
+			//Calculate taxes on net price
+			$tax = array();
+			$shipping_tax_rates = array();
+			if(wc_tax_enabled() && VP_Woo_Pont_Helpers::get_option('tax_status', 'taxable') == 'taxable') {
+				$shipping_tax_rates = WC_Tax::get_shipping_tax_rates();
+				$tax = WC_Tax::calc_shipping_tax($calculated_cost, $shipping_tax_rates);
+			}
+			if(!$tax) $tax = array();
+
+			//Apply rounding to gross price, then back-calculate net
+			$gross = $calculated_cost + array_sum($tax);
+			$rounded_gross = $this->apply_pricing_rounding($gross);
+
+			if($rounded_gross !== $gross && !empty($shipping_tax_rates)) {
+				//Back-calculate net from rounded gross using inclusive tax
+				$tax = WC_Tax::calc_inclusive_tax($rounded_gross, $shipping_tax_rates);
+				$calculated_cost = $rounded_gross - array_sum($tax);
+			} elseif($rounded_gross !== $gross) {
+				//No taxes, net = gross
+				$calculated_cost = $rounded_gross;
+			}
+
+			//Switch currency
+			$formatted_cost = VP_Woo_Pont_Helpers::exchange_currency($calculated_cost);
+			$formatted_tax = VP_Woo_Pont_Helpers::exchange_currency(array_sum($tax));
+
+			//Update the provider cost
+			$provider_costs[$provider_id]['net'] = $calculated_cost;
+			$provider_costs[$provider_id]['tax'] = $tax;
+			$provider_costs[$provider_id]['gross'] = $calculated_cost + array_sum($tax);
+			$provider_costs[$provider_id]['formatted_net'] = wc_price($formatted_cost);
+			$provider_costs[$provider_id]['formatted_gross'] = wc_price($formatted_cost + $formatted_tax);
+		}
+
+		return $provider_costs;
+	}
+
+	//Calculate shipping cost for home delivery methods paired with Kvikk
+	public function apply_auto_pricing_home_delivery($rates, $package) {
+
+		//Check if auto pricing is enabled
+		if(VP_Woo_Pont_Helpers::get_option('kvikk_auto_pricing', 'no') !== 'yes') {
+			return $rates;
+		}
+
+		//Get home delivery pairing
+		$home_delivery = get_option('vp_woo_pont_home_delivery', array());
+		if(empty($home_delivery)) {
+			return $rates;
+		}
+
+		//Check if auto pricing is enabled
+		if(!apply_filters('vp_woo_pont_should_apply_auto_kvikk_home_delivery_pricing', true, $rates, $package)) {
+			return $rates;
+		}
+
+		//Check if any shipping method is paired with a kvikk provider
+		$has_kvikk = false;
+		foreach($home_delivery as $method_id => $provider_id) {
+			if(!empty($provider_id) && strpos($provider_id, 'kvikk_') === 0) {
+				$has_kvikk = true;
+				break;
+			}
+		}
+		if(!$has_kvikk) {
+			return $rates;
+		}
+
+		//Load pricing data
+		$pricing_index = $this->load_pricing_index();
+		if($pricing_index === false) {
+			return $rates;
+		}
+
+		//Get customer country
+		$selected_country = WC()->customer->get_shipping_country();
+
+		//Get cart weight in grams
+		$weight_in_grams = VP_Woo_Pont_Helpers::get_package_weight_in_gramms(WC()->cart);
+
+		//Map home delivery provider IDs to courier names in the pricing JSON
+		$home_delivery_courier_map = array(
+			'kvikk_mpl' => 'mpl',
+			'kvikk_gls' => 'gls',
+			'kvikk_dpd' => 'dpd',
+			'kvikk_foxpost' => 'foxpost',
+			'kvikk_packeta' => 'packeta',
+			'kvikk_famafutar' => 'famafutar',
+			'kvikk_sameday' => 'sameday',
+		);
+
+		foreach($rates as $rate_id => $rate) {
+
+			//Build the shipping method key (method_id:instance_id)
+			$method_key = $rate->get_method_id() . ':' . $rate->get_instance_id();
+
+			//Check if this shipping method is paired with a kvikk provider
+			if(!isset($home_delivery[$method_key]) || empty($home_delivery[$method_key])) {
+				continue;
+			}
+
+			$provider_id = $home_delivery[$method_key];
+
+			//Skip non-kvikk providers
+			if(!isset($home_delivery_courier_map[$provider_id])) {
+				continue;
+			}
+
+			//Skip free shipping methods, those should stay free
+			if($rate->get_method_id() === 'free_shipping') {
+				continue;
+			}
+
+			//Calculate the cost from the price list
+			$courier_name = $home_delivery_courier_map[$provider_id];
+			$calculated_cost = $this->calculate_kvikk_shipping_cost($courier_name, $selected_country, $weight_in_grams, $pricing_index);
+
+			//If no price found, hide the shipping method
+			if($calculated_cost === false) {
+				unset($rates[$rate_id]);
+				continue;
+			}
+
+			//Apply markup
+			$calculated_cost = $this->apply_pricing_markup($calculated_cost);
+
+			//Calculate taxes on net price
+			$taxes = array();
+			$shipping_tax_rates = array();
+			if(wc_tax_enabled() && VP_Woo_Pont_Helpers::get_option('tax_status', 'taxable') == 'taxable') {
+				$shipping_tax_rates = WC_Tax::get_shipping_tax_rates();
+				$taxes = WC_Tax::calc_shipping_tax($calculated_cost, $shipping_tax_rates);
+			}
+			if(!$taxes) $taxes = array();
+
+			//Apply rounding to gross price, then back-calculate net
+			$gross = $calculated_cost + array_sum($taxes);
+			$rounded_gross = $this->apply_pricing_rounding($gross);
+
+			if($rounded_gross !== $gross && !empty($shipping_tax_rates)) {
+				$taxes = WC_Tax::calc_inclusive_tax($rounded_gross, $shipping_tax_rates);
+				$calculated_cost = $rounded_gross - array_sum($taxes);
+			} elseif($rounded_gross !== $gross) {
+				$calculated_cost = $rounded_gross;
+			}
+
+			//Convert currency
+			$calculated_cost = VP_Woo_Pont_Helpers::exchange_currency($calculated_cost);
+			if(!empty($taxes)) {
+				foreach($taxes as $tax_id => $tax_amount) {
+					$taxes[$tax_id] = VP_Woo_Pont_Helpers::exchange_currency($tax_amount);
+				}
+			}
+
+			//Update the rate
+			$rates[$rate_id]->cost = $calculated_cost;
+			$rates[$rate_id]->taxes = $taxes;
+		}
+
+		return $rates;
+	}
+
+	//Load and index pricing data from JSON file
+	public function load_pricing_index() {
+		$paths = VP_Woo_Pont_Helpers::get_download_folder('kvikk_all_shipping_prices');
+		if(!file_exists($paths['path'])) {
+			return false;
+		}
+
+		$pricing_data = json_decode(file_get_contents($paths['path']), true);
+		if(!$pricing_data || !is_array($pricing_data)) {
+			return false;
+		}
+
+		$pricing_index = array();
+		foreach($pricing_data as $entry) {
+			$key = $entry['courier'] . '_' . $entry['country'];
+			$pricing_index[$key] = $entry['prices'];
+		}
+
+		return $pricing_index;
+	}
+
+	//Look up shipping cost from Kvikk price list
+	public function calculate_kvikk_shipping_cost($courier, $country, $weight_in_grams, $pricing_index) {
+		$key = $courier . '_' . $country;
+
+		//Check if pricing exists for this courier + country
+		if(!isset($pricing_index[$key])) {
+			return false;
+		}
+
+		//Find the matching weight range
+		foreach($pricing_index[$key] as $range) {
+			if($weight_in_grams >= $range['min'] && $weight_in_grams <= $range['max']) {
+				return (float)$range['cost'];
+			}
+		}
+
+		return false;
+	}
+
+	//Apply markup to calculated price
+	private function apply_pricing_markup($cost) {
+		$markup_type = VP_Woo_Pont_Helpers::get_option('kvikk_auto_pricing_markup_type', 'none');
+		if($markup_type === 'none') {
+			return $cost;
+		}
+
+		$markup_value = VP_Woo_Pont_Helpers::get_option('kvikk_auto_pricing_markup_value', 0);
+
+		if($markup_type === 'fixed') {
+			$cost += $this->parse_markup_amount($markup_value);
+		} elseif($markup_type === 'percentage') {
+			$cost += $cost * ($this->parse_markup_amount($markup_value) / 100);
+		} elseif($markup_type === 'percentage_fixed') {
+
+			//Value is in a percentage+fixed format, eg. 27+100 means 27% markup, plus 100 on top of that
+			$parts = explode('+', (string)$markup_value);
+			$percentage = $this->parse_markup_amount($parts[0]);
+			$fixed = isset($parts[1]) ? $this->parse_markup_amount($parts[1]) : 0;
+
+			$cost += $cost * ($percentage / 100);
+			$cost += $fixed;
+		}
+
+		return $cost;
+	}
+
+	//Turn a single markup value into a positive float, negative or invalid values are ignored
+	private function parse_markup_amount($value) {
+		$value = (float)str_replace(',', '.', trim((string)$value));
+
+		return ($value > 0) ? $value : 0;
+	}
+
+	//Apply rounding to calculated price
+	private function apply_pricing_rounding($cost) {
+		$rounding = VP_Woo_Pont_Helpers::get_option('kvikk_auto_pricing_rounding', 'none');
+		if($rounding === 'none') {
+			return $cost;
+		}
+
+		switch($rounding) {
+			case 'round_9':
+				$cost = ceil($cost / 10) * 10 - 1;
+				break;
+			case 'round_10':
+				$cost = ceil($cost / 10) * 10;
+				break;
+			case 'round_49':
+				$original_cost = $cost;
+				$cost = floor($cost / 100) * 100 + 49;
+				if($cost < $original_cost) $cost += 100;
+				break;
+			case 'round_90':
+				$original_cost = $cost;
+				$cost = floor($cost / 100) * 100 + 90;
+				if($cost < $original_cost) $cost += 100;
+				break;
+			case 'round_99':
+				$cost = ceil($cost / 100) * 100 - 1;
+				break;
+			case 'round_100':
+				$cost = ceil($cost / 100) * 100;
+				break;
+		}
+
+		return $cost;
+	}
+
+	public function get_settings($settings) {
+		$kvikk_settings = array(
+			array(
+				'title' => __( 'Kvikk settings', 'vp-woo-pont' ),
+				'type' => 'vp_carrier_title',
+				'class' => 'kvikk'
+			),
+			array(
+				'title' => __('API key', 'vp-woo-pont'),
+				'type' => 'vp_kvikk_api',
+				'desc' => __("Enter your account's API key.", 'vp-woo-pont'),
+				'id' => 'kvikk_api_key',
+			),
+			array(
+				'title' => __('Sender ID', 'vp-woo-pont'),
+				'type' => 'select',
+				'class' => 'wc-enhanced-select',
+				'options' => $this->get_pickup_points(),
+				'desc' => __("Select your sender ID.", 'vp-woo-pont'),
+				'id' => 'kvikk_sender_id'
+			),
+            array(
+                'type' => 'vp_kvikk_countries',
+                'title' => __( 'Enabled countries', 'vp-woo-pont' ),
+				'desc' => __('Show pickup points in these countries as available options.', 'vp-woo-pont'),
+				'id' => 'kvikk_countries'
+            ),
+			array(
+				'type' => 'select',
+				'class' => 'wc-enhanced-select',
+				'title' => __( 'Sticker size', 'vp-woo-pont' ),
+				'default' => 'A6',
+				'options' => array(
+					'A6' => __( 'A6 on A4(recommended)', 'vp-woo-pont' ),
+					'A6_SINGLE' => __( 'A6', 'vp-woo-pont' ),
+					'A5_LANDSCAPE' => __( 'Two A5 on landscape A4', 'vp-woo-pont' ),
+				),
+				'id' => 'kvikk_sticker_size'
+			),
+			array(
+				'type' => 'select',
+				'class' => 'wc-enhanced-select',
+				'title' => __( 'Packaged order status', 'vp-woo-pont' ),
+				'options' => VP_Woo_Pont_Settings::get_order_statuses(__('None', 'Order status after scanning', 'vp-woo-pont')),
+				'desc' => __( 'If you scan the label in the Kvikk App, you can mark the order to be in this status.', 'vp-woo-pont' ),
+				'id' => 'kvikk_packaged_order_status',
+			),
+			array(
+				'type' => 'text',
+				'title' => __('Value insurance limit', 'vp-woo-pont'),
+				'default' => 50000,
+				'desc_tip' => __('If empty, it will be the order total up to 50.000 HUF. If you need a higher maximum limit, enter that here. In this case the value insurance service will be added to the shipment automatically.', 'vp-woo-pont'),
+				'id' => 'kvikk_insurance_limit'
+			),
+			'kvikk_fragile_products' => array(
+				'title' => __('Fragile products', 'vp-woo-pont'),
+				'type' => 'multiselect',
+				'class'   => 'wc-enhanced-select',
+				'options' => array(),
+				'id' => 'kvikk_fragile_products',
+				'desc_tip' => __('Select a product attribute or shipping class that relates to fragile shipments, so the generated label will be marked as fragile by default.', 'vp-woo-pont'),
+			),
+			'kvikk_oversized_products' => array(
+				'title' => __('Oversized products', 'vp-woo-pont'),
+				'type' => 'multiselect',
+				'class'   => 'wc-enhanced-select',
+				'options' => array(),
+				'id' => 'kvikk_oversized_products',
+				'desc_tip' => __('Select a product attribute or shipping class that relates to oversized shipments, so the generated label will be marked as oversized by default.', 'vp-woo-pont'),
+			),
+			array(
+				'title' => __('Enable automatic pricing', 'vp-woo-pont'),
+				'type' => 'checkbox',
+				'desc' => __('Enable', 'vp-woo-pont'),
+				'desc_tip' => __('Calculate shipping costs automatically based on the Kvikk price list', 'vp-woo-pont'),
+				'default' => 'no',
+				'id' => 'kvikk_auto_pricing',
+				'class' => 'vp-woo-pont-toggle-group-kvikk-auto-pricing',
+			),
+			array(
+				'title' => __('Price rounding', 'vp-woo-pont'),
+				'type' => 'select',
+				'class' => 'wc-enhanced-select vp-woo-pont-toggle-group-kvikk-auto-pricing-item',
+				'default' => 'none',
+				'options' => array(
+					'none' => __('No rounding', 'vp-woo-pont'),
+					'round_9' => __('Round up to nearest 9 (e.g. 1059)', 'vp-woo-pont'),
+					'round_10' => __('Round up to nearest 10 (e.g. 1060)', 'vp-woo-pont'),
+					'round_49' => __('Round up to nearest 49 (e.g. 1049)', 'vp-woo-pont'),
+					'round_90' => __('Round up to nearest 90 (e.g. 1090)', 'vp-woo-pont'),
+					'round_99' => __('Round up to nearest 99 (e.g. 1099)', 'vp-woo-pont'),
+					'round_100' => __('Round up to nearest 100 (e.g. 1100)', 'vp-woo-pont'),
+				),
+				'desc_tip' => __('Round the final price to a specific ending. Rounding is applied after markup.', 'vp-woo-pont'),
+				'id' => 'kvikk_auto_pricing_rounding'
+			),
+			array(
+				'title' => __('Markup type', 'vp-woo-pont'),
+				'type' => 'select',
+				'class' => 'wc-enhanced-select vp-woo-pont-toggle-group-kvikk-auto-pricing-item vp-woo-pont-select-group-kvikk-auto-pricing',
+				'default' => 'none',
+				'options' => array(
+					'none' => __('No markup', 'vp-woo-pont'),
+					'fixed' => __('Fixed amount', 'vp-woo-pont'),
+					'percentage' => __('Percentage', 'vp-woo-pont'),
+					'percentage_fixed' => __('Percentage + fixed amount', 'vp-woo-pont'),
+				),
+				'desc_tip' => __('Add a markup on top of the Kvikk price.', 'vp-woo-pont'),
+				'id' => 'kvikk_auto_pricing_markup_type'
+			),
+			array(
+				'title' => __('Markup value', 'vp-woo-pont'),
+				'type' => 'text',
+				'class' => 'vp-woo-pont-toggle-group-kvikk-auto-pricing-item vp-woo-pont-select-group-kvikk-auto-pricing-item vp-woo-pont-select-group-kvikk-auto-pricing-item-fixed vp-woo-pont-select-group-kvikk-auto-pricing-item-percentage vp-woo-pont-select-group-kvikk-auto-pricing-item-percentage_fixed',
+				'default' => '0',
+				'desc_tip' => __('The markup amount (fixed value in your currency) or percentage (e.g. 10 for 10%). For percentage + fixed amount, use a percentage+amount format, e.g. 27+100 adds a 27% markup, then 100 on top of that.', 'vp-woo-pont'),
+				'id' => 'kvikk_auto_pricing_markup_value'
+			),
+			array(
+				'type' => 'sectionend'
+			)
+		);
+
+		//Load product categories on settings page
+		if($this->is_settings_page()) {
+			$kvikk_settings['kvikk_fragile_products']['options'] = VP_Woo_Pont_Helpers::get_product_tags()+VP_Woo_Pont_Helpers::get_shipping_classes();
+			$kvikk_settings['kvikk_oversized_products']['options'] = VP_Woo_Pont_Helpers::get_product_tags()+VP_Woo_Pont_Helpers::get_shipping_classes();
+		}
+
+		return $settings+$kvikk_settings;
+	}
+
+	//Check if we are on the settings page
+	public function is_settings_page() {
+		return (isset($_GET['section']) && $_GET['section'] === 'vp_carriers');
+	}
+
+    public function get_kvikk_db() {
+
+		//Check if we need to get multiple countries
+		$countries = get_option('vp_woo_pont_kvikk_countries', array());
+		$hu_couriers = array(
+			'packeta_zpont' => 1,
+			'packeta_zbox' => 1, 
+			'foxpost' => 1, 
+			'mpl_automata' => 1, 
+			'mpl_postapont' => 1, 
+			'mpl_posta' => 1, 
+			'gls_locker' => 1, 
+			'gls_shop' => 1, 
+			'dpd_parcelshop' => 1, 
+			'dpd_alzabox' => 1,
+			'sameday_easybox' => 1,
+			'sameday_pickpackpont' => 1
+		);
+
+		//Default to HU with basic point types if no countries are set
+		if(empty($countries)) {
+			$countries = array('HU' => $hu_couriers);
+		}
+
+		//Make sure we have all for HU
+		if(isset($countries['HU'])) {
+			$countries['HU'] = $hu_couriers;
+		}
+
+		//Initialize saved files array
+		$saved_files = array();
+
+		//Loop through each country and save separate JSON files
+		foreach (array_keys($countries) as $country) {
+			//URL of the database for this country
+			$url = 'https://points-api.kvikk.hu/points?search=packeta,mpl,foxpost,gls,dpd,sameday&country=' . $country;
+
+			//Get data
+			$request = wp_remote_get($url, array(
+				'timeout' => 100,
+			));
+
+			//Check for errors
+			if( is_wp_error( $request ) ) {
+				VP_Woo_Pont()->log_error_messages($request, 'kvikk-import-points-' . $country);
+				continue; // Skip to next country
+			}
+
+			//Get body
+			$body = wp_remote_retrieve_body( $request );
+
+			//Try to convert into json
+			$json = json_decode( $body, true );
+
+			//Check if json exists
+			if($json === null || !isset($json['data'])) {
+				continue; // Skip to next country
+			}
+
+			//Create country-specific results organized by type
+			$country_results = array(
+				'packeta_zpont' => array(), 
+				'packeta_zbox' => array(), 
+				'foxpost' => array(), 
+				'mpl_automata' => array(), 
+				'mpl_postapont' => array(), 
+				'mpl_posta' => array(), 
+				'gls_locker' => array(), 
+				'gls_shop' => array(), 
+				'dpd_parcelshop' => array(), 
+				'dpd_alzabox' => array(),
+				'sameday_easybox' => array(),
+				'sameday_pickpackpont' => array()
+			);
+
+			//Process points and categorize
+			foreach ($json['data'] as $point) {
+				$point_type = $point['type'];
+				if(!isset($country_results[$point_type])) {
+					$point_type = $point['courier'].'_'.$point['type'];
+				}
+				if(isset($countries[$country][$point_type])) {
+					$country_results[$point_type][] = $point;
+				}
+			}
+
+			//Free up memory immediately after processing
+			unset($json);
+			unset($body);
+			unset($request);
+
+			//Save each type for this country with country code in filename
+			foreach ($country_results as $type => $points) {
+				if(!empty($points)) {
+					$saved_files[] = VP_Woo_Pont_Import_Database::save_json_file(array(
+						'courier' => 'kvikk',
+						'type' => $type,
+						'country' => $country,
+						'points' => $points
+					));
+				}
+			}
+
+			//Free country results
+			unset($country_results);
+		}
+
+		//Save to DB
+		VP_Woo_Pont_Import_Database::save_json_files('kvikk', $saved_files);
+
+		//Also update courier details
+		$this->get_pickup_points_response(true);
+
+        return $saved_files;
+    }
+
+    public function get_kvikk_db_manually() {
+        return array( $this, 'get_kvikk_db' );
+    }
+
+    public function add_provider_group($groups) {
+        $groups['kvikk'] = __('Kvikk', 'vp-woo-pont');
+        return $groups;
+    }
+
+    public function add_provider_group_home_delivery($groups) {
+        $groups['kvikk_mpl'] = __('Kvikk MPL', 'vp-woo-pont');
+        //$groups['kvikk_expressone'] = __('Kvikk Express One', 'vp-woo-pont');
+        $groups['kvikk_famafutar'] = __('Kvikk FámaFutár', 'vp-woo-pont');
+        $groups['kvikk_gls'] = __('Kvikk GLS', 'vp-woo-pont');
+        $groups['kvikk_dpd'] = __('Kvikk DPD', 'vp-woo-pont');
+        //$groups['kvikk_dhl'] = __('Kvikk DHL', 'vp-woo-pont');
+        $groups['kvikk_foxpost'] = __('Kvikk Foxpost', 'vp-woo-pont');
+        $groups['kvikk_packeta'] = __('Kvikk Packeta', 'vp-woo-pont');
+		$groups['kvikk_sameday'] = __('Kvikk Sameday', 'vp-woo-pont');
+        return $groups;
+    }
+
+	public function is_configured($configured, $provider) {
+		if(strpos($provider, 'kvikk') === 0 && VP_Woo_Pont_Helpers::get_option('kvikk_api_key')) {
+			return true;
+		}
+		return $configured;
+	}
+
+    public function add_providers($providers) {
+        $providers['kvikk_mpl_posta'] = 'Posta';
+        $providers['kvikk_mpl_postapont'] = 'Postapont';
+        $providers['kvikk_mpl_automata'] = 'MPL Csomagautomata';
+        $providers['kvikk_packeta_zpont'] = 'Packeta Z-Pont';
+        $providers['kvikk_packeta_zbox'] = 'Packeta Z-Box';
+        $providers['kvikk_foxpost'] = 'Foxpost';
+        $providers['kvikk_gls_locker'] = 'GLS Automata';
+        $providers['kvikk_gls_shop'] = 'GLS Csomagpont';
+        $providers['kvikk_dpd_parcelshop'] = 'DPD Csomagpont';
+        $providers['kvikk_dpd_alzabox'] = 'DPD AlzaBox';
+        $providers['kvikk_sameday_easybox'] = 'Sameday easybox';
+        $providers['kvikk_sameday_pickpackpont'] = 'Sameday Pick Pack Pont';
+        return $providers;
+    }
+
+    public function add_provider_subgroups($subgroups) {
+		$subgroups['kvikk'] = array('mpl_posta', 'mpl_postapont', 'mpl_automata', 'packeta_zpont', 'packeta_zbox', 'foxpost', 'gls_shop', 'gls_locker', 'dpd_parcelshop', 'dpd_alzabox', 'sameday_easybox', 'sameday_pickpackpont');
+        return $subgroups;
+    }
+
+	public function create_label($data) {
+
+		//Get courier
+		$courier = $data['provider']; 
+
+		//Fix for foxpost
+		if($courier == 'kvikk_foxpost' && $data['point_id']) {
+			$courier = 'kvikk_packeta_foxpost';
+		}
+
+		//Parse courier details
+		$courier = str_replace('kvikk_', '', $courier);
+		$courier_details = explode('_', $courier);
+		
+		//Create item
+		$order = wc_get_order($data['order_id']);
+		$shipment = array(
+			//Customer info
+			'name' => ($data['point_id']) ? $data['customer']['name'] : $data['customer']['name_with_company'],
+			'phone' => $data['customer']['phone'],
+			'email' => $data['customer']['email'],
+
+			//Courier info
+			'courier' => $courier_details[0],
+			'senderID' => VP_Woo_Pont_Helpers::get_option('kvikk_sender_id'),
+
+			//Package details
+			'orderID' => $order->get_order_number(),
+			'referenceNumber' => (string) $data['reference_number'],
+			'note' => VP_Woo_Pont()->labels->get_package_contents_label($data, 'kvikk'),
+			'cod' => 0,
+			'parcels' => array(
+				array(
+					'weight' => $data['package']['weight_gramm'],
+					'value' => $data['package']['total'],
+				)
+			)
+		);
+
+		//Change sender ID if its set as a parameter
+		if(isset($_POST['vp_woo_pont_kvikk_sender_id'])) {
+			$shipment['senderID'] = sanitize_text_field($_POST['vp_woo_pont_kvikk_sender_id']);
+		}
+
+		//If manually generated, use submitted weight instead
+		if(isset($data['options']) && isset($data['options']['package_weight']) && $data['options']['package_weight'] > 0) {
+			$shipment['parcels'][0]['weight'] = $data['options']['package_weight'];
+		}
+
+		//Check for COD
+		if($data['package']['cod']) {
+			$shipment['cod'] = round($data['package']['total']);
+
+			if($order->get_currency() != 'HUF') {
+				return new WP_Error( 'wrong_currency_for_cod', __('The order currency is not HUF.', 'vp-woo-pont') );
+			}
+		}
+
+		//Check for points
+		if($data['point_id']) {
+			$shipment['deliveryPointID'] = $data['point_id'];
+			$shipment['deliveryPointType'] = $courier_details[1];
+		}
+
+		//Check for home delivery
+		if(!$data['point_id']) {
+			$shipment['address'] = implode(' ', array($order->get_shipping_address_1(), $order->get_shipping_address_2()));
+			$shipment['city'] = $order->get_shipping_city();
+			$shipment['postcode'] = $order->get_shipping_postcode();
+			$shipment['country'] = ($order->get_shipping_country()) ? $order->get_shipping_country() : 'HU';
+
+			//Set remark
+			$shipment['remark'] = $order->get_customer_note();
+
+		} else {
+
+			//If point delivery, set country to HU
+			$shipment['country'] = ($order->get_shipping_country()) ? $order->get_shipping_country() : 'HU';
+
+		}
+
+		//If we have a package size set
+		if(isset($data['package']['size']) && isset($data['package']['size']['width']) && isset($data['package']['size']['height']) && isset($data['package']['size']['length'])) {
+			$shipment['parcels'][0]['width'] = $data['package']['size']['width'];
+			$shipment['parcels'][0]['height'] = $data['package']['size']['height'];
+			$shipment['parcels'][0]['length'] = $data['package']['size']['length'];
+		}
+
+		//Set maximum insurance value
+		if($insurance_limit = VP_Woo_Pont_Helpers::get_option('kvikk_insurance_limit', 50000)) {
+			if($shipment['parcels'][0]['value'] > $insurance_limit) {
+				$shipment['parcels'][0]['value'] = $insurance_limit;
+			}
+		}
+
+		//Add insurance service if needed
+		$enabled_services = array();
+		if($shipment['parcels'][0]['value'] > 50000) {
+			$enabled_services[] = 'insurance';
+		}
+
+		//If manually generated, check submitted extra services
+		if($data['source'] == 'metabox') {
+			if(isset($data['options']) && isset($data['options']['extra_services'])) {
+				$enabled_services = $data['options']['extra_services'];
+			}
+		} else {
+			//Else, check for extra services
+			$services_check = array('fragile', 'oversized');
+			foreach ($services_check as $check_service) {
+				if ($this->is_extra_service_needed($order, $check_service)) {
+					$enabled_services[] = $check_service;
+				}
+			}
+		}
+
+		//Add extra services
+		if(!empty($enabled_services)) {
+			$shipment['parcels'][0]['services'] = $enabled_services;
+		}
+
+		//Support for multiple packages
+		if(isset($_POST['package_count']) && $_POST['package_count'] > 1 && isset($_POST['additional_package_data'])) {
+			$shipment['parcels'] = array();
+			$additional_package_data = json_decode(stripslashes($_POST['additional_package_data']), true);
+
+			foreach ($additional_package_data as $parcel_index => $parcel_data) {
+				$weight = $parcel_data['weight'];
+				$cost = $parcel_data['cost'];
+				$length = $parcel_data['length'];
+				$width = $parcel_data['width'];
+				$height = $parcel_data['height'];
+				$services = $parcel_data['services'];
+				
+				// Process this specific parcel with all its data
+				$parcel = array(
+					'weight' => intval($weight),
+					'value' => intval($cost),
+					'services' => $services
+				);
+
+				if($length && $width && $height) {
+					$parcel['length'] = intval($length);
+					$parcel['width'] = intval($width);
+					$parcel['height'] = intval($height);
+				}
+
+				$shipment['parcels'][] = $parcel;
+			}
+		}
+
+		//Remove the oversized and fragile services if the courier is not mpl or famafutar from all parcels
+		if(!in_array($courier_details[0], array('mpl', 'famafutar'))) {
+			foreach ($shipment['parcels'] as $index => $parcel) {
+				if(isset($parcel['services']) && is_array($parcel['services'])) {
+					$shipment['parcels'][$index]['services'] = array_diff($parcel['services'], array('oversized', 'fragile'));
+				}
+			}
+		}
+
+		//Convert currency for each parcel value if needed
+		if($data['package']['currency'] != 'HUF') {
+			foreach ($shipment['parcels'] as $index => $parcel) {
+				$shipment['parcels'][$index]['value'] = round(VP_Woo_Pont_Helpers::convert_currency($data['package']['currency'], 'HUF', $shipment['parcels'][$index]['value']));
+			}
+		}
+
+		//So developers can modify
+		$shipment = apply_filters('vp_woo_pont_kvikk_label', $shipment, $data);
+
+		//Build request params
+		$remote_url = $this->api_url . 'shipment';
+
+		//Logging
+		VP_Woo_Pont()->log_debug_messages($shipment, 'kvikk-create-label');
+
+		//Make request
+		$request = wp_remote_post($remote_url, array(
+			'headers' => array(
+				'Accept' => 'application/json',
+				'Content-Type' => 'application/json',
+				'X-API-KEY' => $this->api_key
+			),
+			'body' => json_encode($shipment),
+			'timeout' => 60
+		));
+
+		//Check for errors
+		if(is_wp_error($request)) {
+			return $request;
+		}
+
+		//Parse response
+		$response = wp_remote_retrieve_body( $request );
+		$response = json_decode( $response, true );
+
+		//Check for api errors
+		if(wp_remote_retrieve_response_code( $request ) == 401) {
+			return new WP_Error( 'bad_request', __('Wrong API Key', 'vp-woo-pont') );
+		}
+
+		//Check validation errors
+		if(isset($response['validation'])) {
+			$message = $response['message'];
+			if(isset($response['validation']['body'])) {
+				$message = $response['validation']['body']['message'];
+			}
+			return new WP_Error( $response['statusCode'], $message );
+		}
+
+		//Check for errors
+		if(isset($response['status']) && $response['status'] == 'fail') {
+			VP_Woo_Pont()->log_error_messages($response, 'kvikk-create-label');
+			$message = isset($response['message']) ? $response['message'] : __('Unknown error', 'vp-woo-pont');
+			if($response['detail']) {
+				unset($response['message']);
+				unset($response['status']);
+				$message .= ': '.json_encode($response).'';
+			}
+			return new WP_Error( $response['code'], $message );
+		}
+
+		//Else, it was successful
+		$parcel_number = $response['data']['trackingNumber'];
+		$parcel_id = $response['data']['accounting']['courierTrackingNumber'];
+		$pdf = base64_decode($response['data']['label']);
+
+		//Try to save PDF file
+		$pdf_file = VP_Woo_Pont_Labels::get_pdf_file_path('kvikk', $data['order_id']);
+		VP_Woo_Pont_Labels::save_pdf_file($pdf, $pdf_file);
+
+		//Create response
+		$label = array();
+		$label['id'] = $parcel_id;
+		$label['number'] = $parcel_number;
+		$label['pdf'] = $pdf_file['name'];
+
+		//Update kvikk related info
+		$label['kvikk_accounting'] = $response['data']['accounting'];
+
+		//Return file name, package ID, tracking number which will be stored in order meta
+		return $label;
+	}
+
+	public function void_label($data) {
+
+		//Create request data
+		VP_Woo_Pont()->log_debug_messages($data, 'kvikk-void-label-request');
+
+		//So developers can modify
+		$options = apply_filters('vp_woo_pont_kvikk_void_label', $data, $data);
+
+		//Submit request
+		$request = wp_remote_request( $this->api_url.'shipment/'.$options['parcel_number'], array(
+			'method' => 'DELETE',
+			'headers' => array(
+				'Accept' => 'application/json',
+				'Content-Type' => 'application/json',
+				'X-API-KEY' => $this->api_key
+			),
+			'timeout' => 60
+		));
+
+		//Check for errors
+		if(is_wp_error($request)) {
+			return $request;
+		}
+
+		//Get response
+		$response = wp_remote_retrieve_body( $request );
+		$response = json_decode( $response, true );
+
+		//Check for errors
+		if(isset($response['status']) && $response['status'] == 'fail') {
+			VP_Woo_Pont()->log_error_messages($response, 'kvikk-void-label');
+			if($response['code'] == 'shipment_not_found') {
+				$label = array();
+				$label['success'] = true;
+				return $label;
+			}
+			return new WP_Error( 'bad_request', $response['message'] );
+		}
+
+		//Check for success
+		$response = wp_remote_retrieve_body( $request );
+		$response = json_decode( $response, true );
+		$label = array();
+		$label['success'] = true;
+
+		VP_Woo_Pont()->log_debug_messages($response, 'kvikk-void-label-response');
+
+		return $label;
+	}
+
+    public function get_tracking_link($parcel_number, $order = false) {
+		return 'https://tracking.kvikk.hu/#/'.esc_attr($parcel_number);
+	}
+
+	//Function to get tracking informations using API
+	public function get_tracking_info($order) {
+
+		//Parcel number
+		$parcel_number = $order->get_meta('_vp_woo_pont_parcel_number');
+
+		//Use the refresh api if manually refreshed
+		$api_url = $this->api_url.'shipment/'.$parcel_number;
+		if(isset($_POST['action']) && $_POST['action'] == 'vp_woo_pont_update_tracking_info') {
+			$api_url = $this->api_url.'tracking/'.$parcel_number;
+		}
+
+		//Submit request
+		$request = wp_remote_get( $api_url, apply_filters('vp_woo_pont_kvikk_tracking_request', array(
+			'headers' => array(
+				'Accept' => 'application/json',
+				'Content-Type' => 'application/json',
+				'X-API-KEY' => $this->api_key
+			),
+		), $order));
+
+		VP_Woo_Pont()->log_debug_messages($request, 'kvikk-get-tracking-info');
+
+		//Check for errors
+		if(is_wp_error($request)) {
+			return $request;
+		}
+
+		//Check for API errors
+		if(wp_remote_retrieve_response_code( $request ) != 200) {
+			return new WP_Error( 'kvikk_error_not_found', __('Shipment not found', 'vp-woo-pont') );
+		}
+
+		//Check for success
+		$response = wp_remote_retrieve_body( $request );
+		$response = json_decode( $response, true );
+
+		//Collect events
+		$tracking_info = array();
+		foreach ($response['data']['tracking']['events'] as $event) {
+			$tracking_info[] = array(
+				'date' => strtotime($event['date']),
+				'event' => $event['event'],
+				'label' => $event['message'],
+				'location' => $event['location']
+			);
+		}
+		
+		return $tracking_info;
+	}
+
+	public function get_pickup_points() {
+		$blocks = array();
+		//Needs this if so it won't load on every page load
+		if(is_admin() && isset( $_GET['tab']) && $_GET['tab'] == 'shipping' && isset($_GET['section']) && $_GET['section'] == 'vp_carriers' && isset($_GET['carrier']) && $_GET['carrier'] == 'kvikk') {
+			$blocks = $this->get_pickup_points_response(false);
+		}
+		return $blocks;
+	}
+
+	public function validate_api_key() {
+		check_ajax_referer( 'vp-woo-pont-validate-kvikk-api', 'nonce' );
+		$pickup_points = $this->get_pickup_points_response(true);
+
+		//Check for errors
+		if(!$pickup_points) {
+			delete_option('vp_woo_pont_kvikk_courier_details');
+			delete_transient('vp_woo_pont_kvikk_senders');
+			wp_send_json_error(array());
+		}
+
+		//Return response
+		$pickup_points_response = array();
+		foreach ($pickup_points as $id => $name) {
+			$pickup_points_response[] = array(
+				'id' => $id,
+				'name' => $name
+			);
+		}
+		wp_send_json_success($pickup_points_response);
+	}
+
+	public function get_pickup_points_response($refresh = false) {
+		$pickup_points = get_transient('vp_woo_pont_kvikk_senders');
+
+		//Get API key
+		if(isset($_POST['api_key'])) {
+			$api_key = sanitize_text_field($_POST['api_key']);
+		} elseif(isset($_POST['vp_woo_pont_kvikk_api_key'])) {
+			$api_key = sanitize_text_field($_POST['vp_woo_pont_kvikk_api_key']); 
+		} else {
+			$api_key = $this->api_key;
+		}
+
+		if (!$pickup_points || $refresh) {
+
+			//Make a remote request
+			$request = wp_remote_get( $this->api_url.'account-details', array(
+				'headers' => array(
+					'Accept' => 'application/json',
+					'Content-Type' => 'application/json',
+					'X-API-KEY' => $api_key
+				)
+			));
+
+			//Check for API errors
+			if(is_wp_error($request) || wp_remote_retrieve_response_code( $request ) != 200) {
+				return false;
+			}
+
+			//Parse response
+			$response = wp_remote_retrieve_body( $request );
+			$response = json_decode( $response, true );
+			$pickup_points = array();
+
+			if(isset($response['data']) && isset($response['data']['senders']) && is_array($response['data']['senders'])) {
+				foreach ($response['data']['senders'] as $pickup_point) {
+					$pickup_points[$pickup_point['_id']] = $pickup_point['name'].' ('.$pickup_point['city'].', '.$pickup_point['address'].')';
+				}
+
+				//Store the rest
+				$couriers_details = array();
+				if(isset($response['data']['couriers'])) $couriers_details['couriers'] = $response['data']['couriers'];
+				update_option('vp_woo_pont_kvikk_courier_details', $couriers_details);
+
+				//Store shipping pricing data as a JSON file
+				if(isset($response['data']['pricing']['shipping']) && is_array($response['data']['pricing']['shipping'])) {
+					$saved_file = VP_Woo_Pont_Import_Database::save_json_file(array(
+						'courier' => 'kvikk',
+						'country' => 'all',
+						'type' => 'shipping_prices',
+						'points' => $response['data']['pricing']['shipping'],
+					));
+					update_option('vp_woo_pont_kvikk_pricing_file', $saved_file['file']);
+				}
+
+			} else {
+				return false;
+			}
+
+			//Save vat ids for a day
+			set_transient('vp_woo_pont_kvikk_senders', $pickup_points, 60 * 60 * 24);
+		}
+
+		return $pickup_points;
+	}
+
+	public function close_shipments($packages = array(), $orders = array()) {
+
+		//Get extra shipments parameter
+		$shipments_in_request = $_POST['shipments'];
+		
+		//Sanitize shipments
+		$shipments = array();
+		foreach ($shipments_in_request as $shipment) {
+			$order = intval($shipment['order']);
+			$package = sanitize_text_field($shipment['package']);
+			$shipments[$package] = $order;
+		}
+
+		//Create request data
+		$options = array(
+			'pickupDate' => '',
+			'pickupFor' => array(),
+			'shipments' => $packages,
+		);
+
+		//Set pickup date
+		if(isset($_POST['pickup_date'])) {
+			$options['pickupDate'] = sanitize_text_field($_POST['pickup_date']);
+		}
+
+		//Set couriers that needs pickup
+		if(isset($_POST['pickup_for'])) {
+			$options['pickupFor'] = $_POST['pickup_for'];
+		}
+
+		//Try to create label
+		$request = wp_remote_post( $this->api_url.'delivery-note', array(
+			'body'    => json_encode($options),
+			'headers' => array(
+				'Accept' => 'application/json',
+				'Content-Type' => 'application/json',
+				'X-API-KEY' => $this->api_key
+			),
+			'timeout' => 60
+		));
+
+		//Check for errors
+		if(is_wp_error($request)) {
+			return $request;
+		}
+
+		//Get response
+		$response = wp_remote_retrieve_body( $request );
+		$response = json_decode( $response, true );
+
+		//Check for errors
+		if(isset($response['status']) && $response['status'] == 'fail') {
+			return new WP_Error( 'bad_request', $response['message'] );
+		}
+
+		//Check for api errors
+		if(wp_remote_retrieve_response_code( $request ) != 200) {
+			return new WP_Error( 'bad_request', __('Unknown error', 'vp-woo-pont') );
+		}
+
+		//Check for failed shipments
+		$failedShipments = array();
+		$errors = array();
+		if(isset($response['data']['failedShipments']) && count($response['data']['failedShipments']) > 0) {
+			$failedShipments = $response['data']['failedShipments'];
+			foreach ($failedShipments as $failed_shipment) {
+				$failed_order = $shipments[$failed_shipment];
+				if(($key = array_search($failed_order, $orders)) !== false) {
+					unset($orders[$key]);
+				}
+			}
+
+			//Get errors
+			if(isset($response['data']['errors']) && count($response['data']['errors']) > 0) {
+				foreach($response['data']['errors'] as $error) {
+					if(is_array($error)) {
+						$errors[] = array(
+							'code' => $error['code'],
+							'msg' => $error['msg']
+						);
+					} else {
+						$errors[] = array(
+							'code' => 'unknown',
+							'msg' => $error
+						);
+					}
+				}
+			}
+		}
+
+		//Check for successful shipments
+		$successfulShipments = array();
+		if(isset($response['data']['successfulShipments']) && count($response['data']['successfulShipments']) > 0) {
+			$successfulShipments = $response['data']['successfulShipments'];
+
+			//Save PDF files
+			$pdf_files = array();
+			if(isset($response['data']['deliveryNote']) && isset($response['data']['deliveryNote']['documents'])) {
+				foreach($response['data']['deliveryNote']['documents'] as $document) {
+					$pdf = base64_decode($document['pdf']);
+					$pdf_file = VP_Woo_Pont_Labels::get_pdf_file_path('kvikk', 'list-and-close');
+					VP_Woo_Pont_Labels::save_pdf_file($pdf, $pdf_file);
+					$pdf_files[$document['courier']] = $pdf_file['name'];
+				}
+			}
+
+		}
+
+		//Return response in unified format
+		return array(
+			'shipments' => array(),
+			'orders' => $orders,
+			'failed' => $failedShipments,
+			'errors' => $errors,
+			'pdf' => $pdf_files,
+		);
+
+	}
+
+	public function get_merged_pdf_parameters($positions, $provider, $label_size) {
+		if($provider == 'kvikk' && $label_size == 'A6') {
+			$positions['sections'] = 4;
+			$positions['format'] = 'A4';
+			$positions['x'] = array(0, 105, 0, 105);
+			$positions['y'] = array(0, 0, 148, 148);
+			$positions['layout'] = 'grid';
+			$positions['sticker'] = 'A6';
+		}
+
+		if($provider == 'kvikk' && $label_size == 'A5_LANDSCAPE') {
+			$positions['sections'] = 2;
+			$positions['format'] = 'A4-L';
+			$positions['x'] = array(21.5, 170);
+			$positions['y'] = array(31, 31);
+			$positions['layout'] = 'grid';
+			$positions['sticker'] = 'A6';
+		}
+
+		return $positions;
+	}
+
+	public function tracking_page_variables($args, $order) {
+		if($args['provider'] == 'kvikk') {
+			$provider_id = VP_Woo_Pont_Helpers::get_provider_from_order($order);
+			$provider_id = explode('_', $provider_id);
+			$args['provider'] = 'kvikk_'.$provider_id[1];
+			$args['carrier_name'] = str_replace('Kvikk - ', '', $args['carrier_name']);
+		}
+		return $args;
+	}
+
+	public function tracking_email_variables($args, $order) {
+		$courier = VP_Woo_Pont_Helpers::get_carrier_from_order($order);
+		if($courier == 'kvikk') {
+			$provider_id = VP_Woo_Pont_Helpers::get_provider_from_order($order);
+			$provider_id = explode('_', $provider_id);
+			$provider_id = $provider_id[1];
+			$args['carrier_name'] = str_replace('Kvikk - ', '', $args['carrier_name']);
+			$logo = VP_Woo_Pont()::$plugin_url.'assets/images/carriers/'.$provider_id.'.png';
+			$args['carrier_logo'] = $logo;
+		}
+		return $args;
+	}
+
+	public function get_provider_name($name, $provider_id, $prefix) {
+		$name = str_replace('Kvikk - ', '', $name);
+		return $name;
+	}
+
+	public function display_ad() {
+
+		//If Kvikk already activated, or opted to hide the ad, return false
+		if(VP_Woo_Pont_Helpers::get_option('kvikk_api_key') || get_option('_vp_woo_pont_hide_kvikk_info_v2', false)) {
+			return false;
+		}
+
+		?>
+		<div class="kvikk-promo" data-nonce="<?php echo wp_create_nonce( "vp_woo_pont_kvikk_promo" ); ?>">
+			<div class="kvikk-promo-header">
+				<div class="kvikk-promo-logo"></div>
+				<a href="#" class="kvikk-promo-close"><span class="dashicons dashicons-no-alt"></span></a>
+			</div>
+			<p>A Kvikk-en keresztül ennyibe kerülne egy 1kg-os csomagnak a házhozszállítása:</p>
+			<ul class="kvikk-promo-pricing">
+				<li><i class="vp-woo-pont-provider-icon-posta"></i> MPL <strong data-kvikk-promo-price="mpl"> </strong></li>
+				<li><i class="vp-woo-pont-provider-icon-gls"></i> GLS <strong data-kvikk-promo-price="gls"> </strong></li>
+				<li><i class="vp-woo-pont-provider-icon-dpd"></i> DPD <strong data-kvikk-promo-price="dpd"> </strong></li>
+				<li><i class="vp-woo-pont-provider-icon-famafutar"></i> FámaFutár <strong data-kvikk-promo-price="famafutar"> </strong></li>
+				<li><i class="vp-woo-pont-provider-icon-sameday"></i> Sameday <strong data-kvikk-promo-price="sameday"> </strong></li>
+			</ul>
+			<p class="kvikk-promo-footnote">Nettó árak, <strong>tartalmazza az útdíjat és az üzemanyagköltséget</strong>.</p>
+			<div class="kvikk-promo-buttons">
+				<a href="https://kvikk.hu/?source=plugin" target="_blank" data-nonce="<?php echo wp_create_nonce( "vp_woo_pont_kvikk_promo" ); ?>" class="button kvikk-promo-cta">Érdekel</a>
+				<a href="#" class="button kvikk-promo-hide">Elrejtés</a>
+			</div>
+		</div>
+		<?php
+	}
+
+	public function hide_ad() {
+		check_ajax_referer( 'vp_woo_pont_kvikk_promo', 'nonce' );
+		update_option('_vp_woo_pont_hide_kvikk_info_v2', true);
+		wp_send_json_success();
+	}
+
+	public static function ipn_process() {
+		if(isset($_GET['vp_woo_pont_kvikk_ipn'])) {
+
+			// Retrieve API key from the request header
+			$headers = getallheaders();
+			$normalized_headers = array_change_key_case($headers, CASE_LOWER);
+			$api_key = isset($normalized_headers['x-api-key']) ? esc_html($normalized_headers['x-api-key']) : '';
+	
+			// Validate API key
+			if ($api_key != VP_Woo_Pont_Helpers::get_option('kvikk_api_key')) {
+				wp_send_json_error();
+			}
+
+			// Get the raw POST data
+			$raw_post_data = file_get_contents('php://input');
+			$post_data = json_decode($raw_post_data, true);
+
+			// Setup parameters
+			$ipn_parameters = array();
+			if (isset($post_data['orderID'])) $ipn_parameters['order_number'] = esc_html($post_data['orderID']);
+			if (isset($post_data['trackingNumber'])) $ipn_parameters['tracking_number'] = esc_html($post_data['trackingNumber']);
+
+			//Get order based on the tracking number meta
+			$args = array(
+				'meta_key' => '_vp_woo_pont_parcel_number',
+				'meta_value' => $ipn_parameters['tracking_number'],
+			);
+			
+			//Get orders
+			$orders = wc_get_orders( $args );
+			
+			//Check for orders
+			if(count($orders) == 0) {
+				wp_send_json_error();
+			}
+
+			//Get order
+			$order = $orders[0];
+
+			//Get order ID
+			$order_id = $order->get_order_number();
+
+			//Check for order ID
+			if($order_id != $ipn_parameters['order_number']) {
+				wp_send_json_error();
+			}
+
+			//Delete the label
+			$order->delete_meta_data('_vp_woo_pont_parcel_id');
+			$order->delete_meta_data('_vp_woo_pont_parcel_pdf');
+			$order->delete_meta_data('_vp_woo_pont_parcel_number');
+			$order->delete_meta_data('_vp_woo_pont_parcel_pending');
+			$order->delete_meta_data('_vp_woo_pont_parcel_info');
+			$order->delete_meta_data('_vp_woo_pont_parcel_count');
+			$order->delete_meta_data('_vp_woo_pont_kvikk_accounting');
+			$order->save();
+
+			//Add note
+			$order->add_order_note(sprintf(esc_html__("Shipping label removed from the order, because it was removed from Kvikk. Tracking number was: %s", 'vp-woo-pont'), $ipn_parameters['tracking_number']));
+
+			//Return success
+			wp_send_json_success();
+
+			exit();
+		}
+	}
+
+	public static function register_api_endpoints() {
+		register_rest_route('kvikk', '/order-details', array(
+			'methods' => 'POST',
+			'callback' => array(__CLASS__, 'get_order_details'),
+			'permission_callback' => array(__CLASS__, 'validate_api_key_permission'),
+		));
+
+		register_rest_route('kvikk', '/update-order', array(
+			'methods' => 'POST',
+			'callback' => array(__CLASS__, 'update_order_status'),
+			'permission_callback' => array(__CLASS__, 'validate_api_key_permission'),
+		));
+	}
+
+	public static function validate_api_key_permission(WP_REST_Request $request) {
+
+		//Validate stored api key
+		$stored_api_key = VP_Woo_Pont_Helpers::get_option('kvikk_api_key');
+		if (!is_string($stored_api_key) || $stored_api_key === '') {
+			return new WP_Error('invalid_api_key', 'Invalid API Key', array('status' => 401));
+		}
+
+		//Get api key from header and make sure its not empty
+		$api_key = $request->get_header('authorization');
+		if (!is_string($api_key) || $api_key === '') {
+			return new WP_Error('invalid_api_key', 'Invalid API Key', array('status' => 401));
+		}
+
+		//Check if valid
+		if (!hash_equals($stored_api_key, $api_key)) {
+			return new WP_Error('invalid_api_key', 'Invalid API Key', array('status' => 401));
+		}
+
+		return true;
+	}
+
+	public static function validate_api_endpoint(WP_REST_Request $request) {
+
+		//Check the api key again, in case this is called outside of the rest routes above
+		$has_valid_api_key = self::validate_api_key_permission($request);
+		if (is_wp_error($has_valid_api_key)) {
+			return $has_valid_api_key;
+		}
+
+		//Get JSON body params, and make sure they are strings, so they can't be compared loosely
+		$params = $request->get_json_params();
+		$order_id = (isset($params['orderID']) && is_scalar($params['orderID'])) ? (string) $params['orderID'] : '';
+		$tracking_number = (isset($params['trackingNumber']) && is_string($params['trackingNumber'])) ? $params['trackingNumber'] : '';
+		$billing_email = (isset($params['email']) && is_string($params['email'])) ? $params['email'] : '';
+
+		//Validate parameters
+		if ($order_id === '' || $tracking_number === '' || $billing_email === '') {
+			return new WP_Error('missing_params', 'Missing parameters', array('status' => 400));
+		}
+
+		//Get order
+		$order = wc_get_order($order_id);
+		if (!$order) {
+			return new WP_Error('order_not_found', 'Order not found', array('status' => 404));
+		}
+
+		//Verify order details
+		$parcel_number = $order->get_meta('_vp_woo_pont_parcel_number');
+		if (!is_string($parcel_number) || $parcel_number === '' || !hash_equals($parcel_number, $tracking_number)) {
+			return new WP_Error('invalid_order', 'Invalid order details', array('status' => 404));
+		}
+
+		//Verify billing email
+		if (strtolower($order->get_billing_email()) !== strtolower($billing_email)) {
+			return new WP_Error('invalid_order', 'Invalid order details', array('status' => 404));
+		}
+
+		return $order;
+	}
+
+	public static function get_order_details(WP_REST_Request $request) {		
+
+		//Validate request
+		$order = self::validate_api_endpoint($request);
+
+		//If its an error
+		if(is_wp_error($order)) {
+			return $order;
+		}
+		
+		//Generate response
+		$data = array(
+			'id' => $order->get_id(),
+			'order_number' => $order->get_order_number(),
+			'note' => $order->get_customer_note(),
+			'items' => array(),
+			'first_order' => false,
+			'target_status' => (VP_Woo_Pont_Helpers::get_option('kvikk_packaged_order_status', 'no') != 'no'),
+			'meta' => array(),
+		);
+
+		//Check if this is the user's first order
+		$customer_orders = wc_get_orders(array(
+			'billing_email' => $order->get_billing_email(),
+			'exclude' => array($order->get_id()),
+			'limit' => 1, 
+		));
+
+		//If theres no more orders, it is the first order for the customer
+		if (empty($customer_orders)) {
+			$data['is_first_order'] = true;
+		}
+
+		//Setup line items
+		foreach($order->get_items() as $order_item) {
+			$item = array(
+				'name' => $order_item->get_name(),
+				'qty' => $order_item->get_quantity(),
+				'thumbnail' => '',
+				'meta' => array(),
+			);
+
+			//Get product
+			$product_object = is_callable( array( $order_item, 'get_product' ) ) ? $order_item->get_product() : null;
+			if ( $product_object ) {
+
+				//Get product image
+				if($product_object->get_image_id()) {
+					$thumbnail = wp_get_attachment_image_src( $product_object->get_image_id(), 'woocommerce_thumbnail' )[0];
+					$item['thumbnail'] = $thumbnail;
+				}
+
+				//Add sku to meta
+				$item['meta'][] = array(
+					'label' => 'SKU',
+					'value' => $product_object->get_sku()
+				);				
+			}
+
+			//Additional meta data
+			$meta_data = $order_item->get_formatted_meta_data();
+			foreach ( $meta_data as $meta_id => $meta ) {
+				$item['meta'][] = array(
+					'label' => wp_kses_post( $meta->display_key ),
+					'value' => wp_kses_post( force_balance_tags( $meta->display_value ) )
+				);
+			}
+
+			//Append product
+			$data['items'][] = $item;
+
+		}
+
+		//Allow developers to modify the response
+		$data = apply_filters('vp_woo_pont_kvikk_order_details', $data, $order);
+	
+		// Return order details
+		return new WP_REST_Response($data, 200);
+	}
+
+	public static function update_order_status(WP_REST_Request $request) {		
+		
+		//Validate request
+		$order = self::validate_api_endpoint($request);
+
+		//If its an error
+		if(is_wp_error($order)) {
+			return $order;
+		}
+
+		//Change order status
+		$target_status = VP_Woo_Pont_Helpers::get_option('kvikk_packaged_order_status', 'no');
+		if($target_status != 'no') {
+			$order->update_status($target_status, __( 'Order status updated, because it was marked as packaged in the Kvikk App.', 'vp_woo_pont' ));
+			$order->save();
+		} else {
+			$order->add_order_note(esc_html__("Shipment was marked as packaged in the Kvikk App.", 'vp-woo-pont'));
+		}
+	
+		// Return order details
+		return new WP_REST_Response(array(), 200);
+	}
+
+	public static function save_settings() {
+		if(isset($_GET['carrier']) && $_GET['carrier'] == 'kvikk') {
+			update_option('vp_woo_pont_kvikk_foxpost_type_selected', true);
+		}
+	}
+
+	public static function show_foxpost_packeta_notice() {
+
+		//Get current screen
+		$screen = get_current_screen();
+		$screen_id = $screen ? $screen->id : '';
+
+		//Check if we are on the right screen
+		if(in_array($screen_id, wc_get_screen_ids())) {
+
+			//Check if we need to show the notice
+			if(VP_Woo_Pont_Helpers::get_option('kvikk_api_key') && !VP_Woo_Pont_Helpers::get_option('kvikk_foxpost_type_selected')) {
+
+				//Get enabled providers
+				$providers = get_option('vp_woo_pont_enabled_providers', array());
+
+				//Check if we have either kvikk_packeta_zpont, kvikk_packeta_zbox or kvikk_foxpost enabled
+				$packeta_providers = array('kvikk_packeta_zpont', 'kvikk_packeta_zbox', 'kvikk_foxpost');
+				$packeta_enabled = false;
+				foreach ($providers as $provider) {
+					if(in_array($provider, $packeta_providers)) {
+						$packeta_enabled = true;
+						break;
+					}
+				}
+
+				//If we have packeta enabled, show the notice
+				if(!$packeta_enabled) {
+					return;
+				}
+
+				//Only show after 2025 may 1st
+				if(strtotime('2025-05-01') > time()) {
+					return;
+				}				
+
+			?>
+			<div class="notice notice-warning vp-woo-pont-kvikk-foxpost-packeta-notice is-dismissible">
+				<div class="vp-woo-pont-kvikk-foxpost-packeta-notice-logo"></div>
+
+				<p>Mostantól a <strong>Foxpost és Packeta csomagokat</strong> is feladhatod <strong>Foxpost automatában</strong>, nem csak Packeta Z-Pont átvevőhelyen.</p>
+				<p>Ha szeretnéd ezt használni, lépj be a <a href="https://app.kvikk.hu" target="_blank">Kvikk fiókodba</a>, és a <strong>Fiók beállításoknál</strong> válaszd ki, hogy melyik feladási módot szeretnéd használni: továbbra is Z-Pont átvevőhelyen adod fel, vagy váltasz Foxpost automatában történő feladásra.</p>
+				<p><a href="https://support.kvikk.hu/docs/shipments/couriers/foxpost-information/" target="_blank">További információ és segítség a beállításhoz &rarr;</a></p>
+				
+				<div class="vp-woo-pont-kvikk-foxpost-packeta-notice-buttons">
+					<a href="https://app.kvikk.hu" target="_blank" class="button button-primary" id="vp-woo-pont-foxpost-packeta-notice-close">Fiók beállítások</a>
+					<a href="https://support.kvikk.hu/docs/shipments/couriers/foxpost-information/" target="_blank" class="button" id="vp-woo-pont-foxpost-packeta-notice-close">Bővebb infó</a>
+				</div>
+			</div>
+
+			<script>
+				jQuery(document).ready(function($) {
+					$( document ).on( 'click', '.vp-woo-pont-kvikk-foxpost-packeta-notice a, .vp-woo-pont-kvikk-foxpost-packeta-notice .notice-dismiss', function () {
+						$('.vp-woo-pont-kvikk-foxpost-packeta-notice').addClass('loading');
+						var data = {
+							action: 'vp_woo_pont_kvikk_foxpost_packeta_notice',
+							nonce: '<?php echo wp_create_nonce( "vp_woo_pont_kvikk_foxpost_packeta_notice" ); ?>'
+						};
+						$.post(ajaxurl, data, function(response) {
+							$('.vp-woo-pont-kvikk-foxpost-packeta-notice').slideUp();
+						});
+					});
+				});
+
+			</script>
+			<?php
+			}
+		}
+
+	}
+
+	public function hide_foxpost_packeta_notice() {
+		check_ajax_referer( 'vp_woo_pont_kvikk_foxpost_packeta_notice', 'nonce' );
+		update_option('vp_woo_pont_kvikk_foxpost_type_selected', true);
+		wp_send_json_success();
+	}
+
+	public function add_sender_id_field($order) {
+		$senders = $this->get_pickup_points_response();
+		if($senders === false || count($senders) < 2) {
+			return;
+		}
+		?>
+			<li class="vp-woo-pont-metabox-generate-options-item" data-providers="[kvikk]">
+				<label>Feladási cím</label>
+				<select name="vp_woo_pont_kvikk_sender_id">
+					<?php foreach ($senders as $id => $name) { ?>
+						<option value="<?php echo esc_attr($id); ?>" <?php selected(VP_Woo_Pont_Helpers::get_option('kvikk_sender_id'), $id); ?>><?php echo esc_html($name); ?></option>
+					<?php } ?>
+				</select>
+			</li>
+
+			<script>
+			jQuery(document).ready(function($){
+				$.ajaxPrefilter(function(options, originalOptions, jqXHR) {
+					if(options && typeof options.data === 'string' && options.data.includes('vp_woo_pont_generate_label')) {
+						var sender_id = $('select[name="vp_woo_pont_kvikk_sender_id"]').val();
+						options.data += '&vp_woo_pont_kvikk_sender_id=' + encodeURIComponent(sender_id);
+					}
+				});
+			});
+			</script>
+		<?php
+	}
+
+	public function add_extra_services_fields($order) {
+		?>
+			<li data-providers="[kvikk]" class="vp-woo-pont-metabox-generate-options-item vp-woo-pont-package-services">
+				<label><?php esc_html_e('Extra services','vp-woo-pont'); ?></label>
+				<ul>
+					<?php foreach ($this->extra_services as $service_id => $service): ?>
+						<?php
+						$saved_options = [];
+						$order_total = $order->get_total();
+						$insurance_max = VP_Woo_Pont_Helpers::get_option('kvikk_insurance_limit', 50000);
+						if ($order_total > $insurance_max) {
+							$saved_options[] = 'insurance';
+						}
+						$services_check = array('fragile', 'oversized');
+						foreach ($services_check as $check_service) {
+							if ($this->is_extra_service_needed($order, $check_service)) {
+								$saved_options[] = $check_service;
+							}
+						}
+						$is_checked = apply_filters('vp_woo_pont_extra_service_enabled', in_array($service_id, $saved_options), $service_id, 'kvikk', $order);
+						?>
+						<li>
+							<label for="vp_woo_pont_extra_service_<?php echo esc_attr($service_id); ?>">
+								<input type="checkbox" name="vp_woo_pont_extra_services" id="vp_woo_pont_extra_service_<?php echo esc_attr($service_id); ?>" value="<?php echo esc_attr($service_id); ?>" <?php checked($is_checked); ?> />
+								<span><?php echo esc_html__($service, 'vp-woo-pont'); ?></span>
+							</label>
+						</li>
+					<?php endforeach; ?>
+				</ul>
+			</li>
+		<?php
+	}
+	public function add_additional_package_fields($order) {
+		$packaging_types = get_option('vp_woo_pont_packagings');
+
+		?>
+			<li style="display:none" id="vp_woo_pont_kvikk_parcels">
+				<label>Küldemények adatai</label>
+				<ul class="vp-woo-pont-kvikk-parcels">
+					<li class="vp-woo-pont-kvikk-parcel-sample" style="display:none;">
+						<div class="vp-woo-pont-kvikk-parcel-main-fields">
+							<div class="vp-woo-pont-kvikk-parcel-unit">
+								<input type="text" name="vp_woo_pont_kvikk_package_weights[]" placeholder="" value="" />
+								<span>gramm</span>
+							</div>
+							<div class="vp-woo-pont-kvikk-parcel-unit">
+								<input type="text" name="vp_woo_pont_kvikk_package_costs[]" placeholder="" value="" />
+								<span>Ft</span>
+							</div>
+						</div>
+						<?php if($packaging_types) { ?>
+							<div class="vp-woo-pont-kvikk-parcel-package-size">
+								<div class="vp-woo-pont-kvikk-parcel-unit">
+									<input type="text" name="vp_woo_pont_kvikk_length" placeholder="" value="" />
+									<span>cm</span>
+								</div>
+								<div class="vp-woo-pont-kvikk-parcel-unit">
+									<input type="text" name="vp_woo_pont_kvikk_width" placeholder="" value="" />
+									<span>cm</span>
+								</div>
+								<div class="vp-woo-pont-kvikk-parcel-unit">
+									<input type="text" name="vp_woo_pont_kvikk_height" placeholder="" value="" />
+									<span>cm</span>
+								</div>
+								<a href="#" class="vp-woo-pont-kvikk-parcel-boxes-btn">
+									<span class="dashicons dashicons-archive"></span>
+								</a>
+							</div>
+							<ul class="vp-woo-pont-kvikk-parcel-packaging-types" style="display: none;">
+								<?php foreach ( $packaging_types as $packaging_id => $packaging_type ): ?>
+									<li>
+										<input type="radio" name="vp_woo_pont_kvikk_packaging_type" data-length="<?php echo esc_attr($packaging_type['length']); ?>" data-width="<?php echo esc_attr($packaging_type['width']); ?>" data-height="<?php echo esc_attr($packaging_type['height']); ?>" id="vp_woo_pont_kvikk_packaging_type_<?php echo esc_attr($packaging_type['sku']); ?>" value="<?php echo esc_attr($packaging_type['sku']); ?>">
+										<label for="vp_woo_pont_kvikk_packaging_type_<?php echo esc_attr($packaging_type['sku']); ?>">
+											<?php echo esc_html($packaging_type['name']); ?>
+											<small>
+												<?php echo esc_html($packaging_type['length']); ?>x<?php echo esc_html($packaging_type['width']); ?>x<?php echo esc_html($packaging_type['height']); ?>cm
+											</small>
+										</label>
+									</li>
+								<?php endforeach; ?>
+								<li>
+									<input type="radio" name="vp_woo_pont_kvikk_packaging_type" id="vp_woo_pont_kvikk_packaging_type_custom" value="custom">
+									<label for="vp_woo_pont_kvikk_packaging_type_custom">
+										<?php esc_html_e('Custom packaging', 'vp-woo-pont'); ?>
+									</label>
+								</li>
+							</ul>
+						<?php } ?>
+
+						<ul>
+							<?php foreach (VP_Woo_Pont()->providers['kvikk']->extra_services as $service_id => $service): ?>
+								<?php
+								if($service_id == 'nextday') {
+									continue;
+								}
+								$saved_options = [];
+								$services_check = array('fragile', 'oversized');
+								foreach ($services_check as $check_service) {
+									if ($this->is_extra_service_needed($order, $check_service)) {
+										$saved_options[] = $check_service;
+									}
+								}
+								?>
+								<li>
+									<label for="vp_woo_pont_extra_service_<?php echo esc_attr($service_id); ?>">
+										<input type="checkbox" name="vp_woo_pont_kvikk_services" id="vp_woo_pont_kvikk_service_<?php echo esc_attr($service_id); ?>" value="<?php echo esc_attr($service_id); ?>" <?php checked(in_array($service_id, $saved_options)); ?> />
+										<span><?php echo esc_html__($service, 'vp-woo-pont'); ?></span>
+									</label>
+								</li>
+							<?php endforeach; ?>
+						</ul>
+
+					</li>
+				</ul>
+			</li>
+
+			<script>
+			jQuery(document).ready(function($){
+				function renderKvikkParcels(count) {
+					var $list = $('.vp-woo-pont-kvikk-parcels');
+					var $sample = $list.find('.vp-woo-pont-kvikk-parcel-sample');
+					$list.find('.vp-woo-pont-kvikk-parcel:not(.vp-woo-pont-kvikk-parcel-sample)').remove();
+					for (var i = 0; i < count; i++) {
+						var $clone = $sample.clone(true, true).removeClass('vp-woo-pont-kvikk-parcel-sample').addClass('vp-woo-pont-kvikk-parcel').show();
+						// Ensure unique name attributes for packaging_type radios
+						$clone.find('input[type=radio][name=vp_woo_pont_kvikk_packaging_type]').each(function(){
+							$(this).attr('name', 'vp_woo_pont_kvikk_packaging_type_' + i);
+						});
+						// Preselect custom if none selected
+						var $radios = $clone.find('input[type=radio][name="vp_woo_pont_kvikk_packaging_type_' + i + '"]');
+						if ($radios.filter(':checked').length === 0) {
+							$radios.filter('[value="custom"]').prop('checked', true).trigger('change');
+						}
+						$list.append($clone);
+					}
+				}
+
+				$(document).on('change', '#vp_woo_pont_package_count', function(){
+					var package_count = parseInt($(this).val(), 10) || 0;
+					var provider = $('.vp-woo-pont-metabox-content').data('provider_id');
+
+					if(provider != 'kvikk') {
+						return;
+					}
+
+					$('#vp_woo_pont_kvikk_parcels').hide();
+					$('.vp-woo-pont-package-size').show();
+					$('.vp-woo-pont-package-weight').show();
+					$('.vp-woo-pont-package-services').show();
+
+					if(package_count > 1) {
+						$('#vp_woo_pont_kvikk_parcels').show();
+						$('.vp-woo-pont-package-weight').hide();
+						$('.vp-woo-pont-package-size').hide();
+						$('.vp-woo-pont-package-services').hide();
+						renderKvikkParcels(package_count);
+					}
+				});
+
+				// Show/hide packaging types list on "Boxes" button click
+				$(document).on('click', '.vp-woo-pont-kvikk-parcel-boxes-btn', function(e){
+					e.preventDefault();
+					var $parcel = $(this).closest('.vp-woo-pont-kvikk-parcel, .vp-woo-pont-kvikk-parcel-sample');
+					var $types = $parcel.find('.vp-woo-pont-kvikk-parcel-packaging-types');
+					if ($types.is(':visible')) {
+						$types.hide();
+					} else {
+						$types.show();
+					}
+				});
+
+				// When a packaging type is selected, fill in the dimensions, set readonly, and hide the list
+				$(document).on('change', '.vp-woo-pont-kvikk-parcel-packaging-types input[type=radio]', function(){
+					var $li = $(this).closest('.vp-woo-pont-kvikk-parcel, .vp-woo-pont-kvikk-parcel-sample');
+					var $length = $li.find('input[name="vp_woo_pont_kvikk_length"]');
+					var $width = $li.find('input[name="vp_woo_pont_kvikk_width"]');
+					var $height = $li.find('input[name="vp_woo_pont_kvikk_height"]');
+					if($(this).val() !== 'custom') {
+						$length.val($(this).data('length')).prop('readonly', true);
+						$width.val($(this).data('width')).prop('readonly', true);
+						$height.val($(this).data('height')).prop('readonly', true);
+					} else {
+						$length.val('').prop('readonly', false);
+						$width.val('').prop('readonly', false);
+						$height.val('').prop('readonly', false);
+					}
+					$li.find('.vp-woo-pont-kvikk-parcel-packaging-types').hide();
+				});
+
+				// Make clicking the label also select the radio button
+				$(document).on('click', '.vp-woo-pont-kvikk-parcel-packaging-types label', function(e){
+					var $radio = $(this).closest('li').find('input[type=radio]');
+					if (!$radio.prop('checked')) {
+						$radio.prop('checked', true).trigger('change');
+					}
+					// Prevent default label click to avoid double event
+					e.preventDefault();
+				});
+
+				// AJAX Prefilter: collect all parcel data and append to request
+				$.ajaxPrefilter(function(options, originalOptions, jqXHR) {
+					if(options && typeof options.data === 'string' && options.data.includes('vp_woo_pont_generate_label')) {
+						var package_count = parseInt($('input#vp_woo_pont_package_count').val(), 10) || 0;
+						if(package_count > 1) {
+							var package_data = {};
+							$('.vp-woo-pont-kvikk-parcel').each(function(index){
+								var weight = $(this).find('input[name="vp_woo_pont_kvikk_package_weights[]"]').val();
+								var cost = $(this).find('input[name="vp_woo_pont_kvikk_package_costs[]"]').val();
+								var length = $(this).find('input[name="vp_woo_pont_kvikk_length"]').val();
+								var width = $(this).find('input[name="vp_woo_pont_kvikk_width"]').val();
+								var height = $(this).find('input[name="vp_woo_pont_kvikk_height"]').val();
+
+								var package_services_array = $(this).find('input[name="vp_woo_pont_kvikk_services"]:checked')
+									.map(function (){
+									return $(this).val();
+								}).toArray();
+
+								// Store all package data with explicit index
+								package_data[index] = {
+									weight: weight || '',
+									cost: cost || '',
+									length: length || '',
+									width: width || '',
+									height: height || '',
+									services: package_services_array
+								};
+							});
+							
+							// Send as JSON for easy server-side processing
+							options.data += '&additional_package_data='+encodeURIComponent(JSON.stringify(package_data));
+
+						}
+					}
+				});
+			});
+			</script>
+			<?php
+	}
+
+	public function is_extra_service_needed($order, $service_type) {
+		$fragile_product_tags = VP_Woo_Pont_Helpers::get_option('kvikk_'.$service_type.'_products', array());
+		if(empty($fragile_product_tags)) {
+			return false;
+		}
+
+		$order_items = $order->get_items();
+		foreach ($order_items as $item) {
+			$product = $item->get_product();
+			if($product) {
+				$tags = $product->get_tag_ids();
+				$shipping_class = $product->get_shipping_class();
+				if(in_array($shipping_class, $fragile_product_tags)) {
+					return true;
+				}
+
+				foreach ($tags as $tag) {
+					if(in_array($tag, $fragile_product_tags)) {
+						return true;
+					}
+				}
+			}
+		}
+
+		return false;
+	}
+
+	public function get_enabled_countries() {
+		$saved_countries = get_option('vp_woo_pont_kvikk_countries', array('HU' => 'Hungary'));
+		if(!is_array($saved_countries)) {
+			$saved_countries = array('HU' => 'Hungary');
+		}
+		$countries = array_keys($saved_countries);
+		return $countries;
+	}
+
+}

@@ -1,0 +1,402 @@
+// ------------------------------------
+// CART PAGE
+// ------------------------------------
+$_cart-item-image-width:             $order-summary-image-width !default;
+$_cart-item-image-width--large:      remsize( 8rem ) !default;
+$_cart-sticky-offset:                $global-spacing-small !default;
+
+
+
+// Page title
+body.has-fc-cart-page .fc-cart__title {
+	margin: $global-spacing-small 0;
+	padding: 0;
+	font-size: $font-size-large;
+	text-align: $alignment-left;
+}
+body.has-fc-cart-page.has-checkout-header .fc-cart__title {
+	@media (#{$bp-smaller-than-desktop}) {
+		margin-top: $global-spacing-small;
+	}
+}
+
+
+
+// Columns layout
+body.has-fc-cart-page .fc-cart {
+	display: block;
+	text-align: $alignment-left;
+
+	@media (#{$bp-larger-than-desktop}) {
+		display: grid;
+		grid-template-columns: minmax( 0, 1fr ) minmax( 0, #{ $checkout-overview-width--large-screen } );
+		column-gap: $checkout-column-gap--large-screen;
+		align-items: start;
+	}
+}
+body.has-fc-cart-page .fc-cart__main,
+body.has-fc-cart-page .fc-cart__sidebar {
+	min-width: 0;
+}
+body.has-fc-cart-page .fc-cart__sidebar {
+	@media (#{$bp-larger-than-desktop}) {
+		align-self: stretch;
+	}
+}
+body.has-fc-cart-page.has-fc-cart-sticky-order-summary .fc-cart__sidebar-inner {
+	@media (#{$bp-larger-than-desktop}) {
+		position: sticky;
+		top: $_cart-sticky-offset;
+	}
+}
+body.has-fc-cart-page.has-fc-cart-sticky-order-summary.admin-bar .fc-cart__sidebar-inner {
+	@media (#{$bp-larger-than-desktop}) {
+		top: calc( #{ $_cart-sticky-offset } + 32px ); // Use pixels to match styles of the WordPress Admin bar
+	}
+}
+
+// Remove theme layout styles from the collaterals wrapper
+body.has-fc-cart-page .fc-cart .cart-collaterals {
+	float: none !important; // Needed to override theme styles
+	width: auto !important; // Needed to override theme styles
+}
+body.has-fc-cart-page .fc-cart .cart-collaterals::before,
+body.has-fc-cart-page .fc-cart .cart-collaterals::after {
+	display: none;
+}
+body.has-fc-cart-page .fc-cart .cart-collaterals .cart_totals {
+	float: none !important; // Needed to override theme styles
+	margin: 0 0 $global-spacing-small;
+	width: 100% !important; // Needed to override theme styles
+
+	@media (#{$bp-smaller-than-tablet}) {
+		margin-left: calc( -1 * #{ $container-spacing-mobile } );
+		margin-right: calc( -1 * #{ $container-spacing-mobile } );
+		width: calc( 100% + 2 * #{ $container-spacing-mobile } ) !important; // Needed to override theme styles
+	}
+}
+
+
+
+// Cart items table
+body.has-fc-cart-page .fc-cart .woocommerce-cart-form {
+	margin: 0;
+}
+body.has-fc-cart-page .fc-cart table.fc-cart-items {
+	display: block;
+	margin: 0;
+	width: 100%;
+	border: 0;
+	border-collapse: collapse;
+	background-color: transparent;
+}
+body.has-fc-cart-page .fc-cart table.fc-cart-items tbody {
+	display: block;
+	border: 0;
+}
+body.has-fc-cart-page .fc-cart table.fc-cart-items tr,
+body.has-fc-cart-page .fc-cart table.fc-cart-items td {
+	background-color: transparent !important; // Needed to override theme styles
+}
+body.has-fc-cart-page .fc-cart table.fc-cart-items td {
+	display: block;
+	margin: 0;
+	padding: 0;
+	border: 0;
+	text-align: $alignment-left;
+}
+// Mobile labels added by WooCommerce for responsive tables
+body.has-fc-cart-page .fc-cart table.fc-cart-items td::before {
+	display: none !important; // Needed to override theme styles
+}
+
+
+
+// Cart item rows
+body.has-fc-cart-page .fc-cart table.fc-cart-items tr.fc-cart-item {
+	display: grid;
+	grid-template-columns: $_cart-item-image-width minmax( 0, 1fr ) auto auto;
+	grid-template-areas:
+		"image name name remove"
+		"image quantity subtotal subtotal";
+	column-gap: $global-spacing-extra-small;
+	row-gap: remsize( .5rem );
+	align-items: center;
+	padding: $global-spacing-extra-small 0;
+	border-top: solid $order-summary-cell-border-width--products $order-summary-cell-border-color--products;
+
+	@media (#{$bp-larger-than-tablet}) {
+		grid-template-columns: $_cart-item-image-width--large minmax( 0, 1fr ) auto minmax( remsize( 8rem ), auto ) auto;
+		grid-template-areas: "image name quantity subtotal remove";
+		column-gap: $global-spacing-small;
+	}
+}
+body.has-fc-cart-page .fc-cart table.fc-cart-items tr.fc-cart-item:first-child {
+	border-top: 0;
+	padding-top: 0;
+}
+
+body.has-fc-cart-page .fc-cart table.fc-cart-items td.product-thumbnail {
+	grid-area: image;
+	align-self: start;
+}
+body.has-fc-cart-page .fc-cart table.fc-cart-items td.product-thumbnail img {
+	display: block;
+	box-sizing: border-box;
+	margin: 0;
+	padding: $order-summary-image-padding;
+	width: 100%;
+	max-width: 100%;
+	height: auto;
+	border: solid $order-summary-image-border-width $order-summary-image-border-color;
+	border-radius: $order-summary-image-border-radius;
+	background-color: $order-summary-image-background-color;
+	box-shadow: $order-summary-image-box-shadow;
+}
+
+body.has-fc-cart-page .fc-cart table.fc-cart-items td.product-name {
+	grid-area: name;
+	font-size: $font-size-small;
+	line-height: 1.4;
+}
+body.has-fc-cart-page .fc-cart table.fc-cart-items td.product-name > a {
+	font-weight: bold;
+	text-decoration: none;
+}
+body.has-fc-cart-page .fc-cart table.fc-cart-items td.product-name .variation,
+body.has-fc-cart-page .fc-cart table.fc-cart-items td.product-name .wc-item-meta,
+body.has-fc-cart-page .fc-cart table.fc-cart-items td.product-name .backorder_notification,
+body.has-fc-cart-page .fc-cart table.fc-cart-items .fc-cart-item__price {
+	margin: remsize( .3rem ) 0 0;
+	color: $grey;
+	font-size: $font-size-extra-small;
+}
+body.has-fc-cart-page .fc-cart table.fc-cart-items td.product-name dl.variation dt,
+body.has-fc-cart-page .fc-cart table.fc-cart-items td.product-name dl.variation dd {
+	display: inline;
+	margin: 0;
+	float: none;
+}
+body.has-fc-cart-page .fc-cart table.fc-cart-items td.product-name dl.variation dd p {
+	display: inline;
+	margin: 0;
+}
+
+body.has-fc-cart-page .fc-cart table.fc-cart-items td.product-quantity {
+	grid-area: quantity;
+}
+body.has-fc-cart-page .fc-cart table.fc-cart-items td.product-quantity .quantity {
+	display: inline-block;
+	margin: 0;
+}
+body.has-fc-cart-page .fc-cart table.fc-cart-items td.product-quantity .qty {
+	box-sizing: border-box;
+	margin: 0;
+	padding: 0 remsize( .5rem );
+	width: remsize( 7rem );
+	height: remsize( 4rem );
+	text-align: center;
+}
+
+body.has-fc-cart-page .fc-cart table.fc-cart-items td.product-subtotal {
+	grid-area: subtotal;
+	font-size: $font-size-small;
+	font-weight: bold;
+	text-align: $alignment-right;
+	white-space: nowrap;
+}
+
+body.has-fc-cart-page .fc-cart table.fc-cart-items td.product-remove {
+	grid-area: remove;
+	align-self: start;
+	text-align: $alignment-right;
+
+	@media (#{$bp-larger-than-tablet}) {
+		align-self: center;
+	}
+}
+body.has-fc-cart-page .fc-cart table.fc-cart-items td.product-remove a.remove {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: remsize( 2.6rem );
+	height: remsize( 2.6rem );
+	border-radius: 50%;
+	background-color: transparent;
+	color: $grey !important; // Needed to override theme styles
+	font-size: remsize( 2.2rem );
+	font-weight: normal;
+	line-height: 1;
+	text-decoration: none;
+}
+body.has-fc-cart-page .fc-cart table.fc-cart-items td.product-remove a.remove:hover,
+body.has-fc-cart-page .fc-cart table.fc-cart-items td.product-remove a.remove:focus {
+	background-color: $lighter-grey;
+	color: $error-color !important; // Needed to override theme styles
+}
+
+
+
+// Cart actions: coupon code and update cart
+body.has-fc-cart-page .fc-cart table.fc-cart-items tr.fc-cart-actions-row {
+	display: block;
+	padding: $global-spacing-small 0 0;
+	border-top: solid remsize( .1rem ) $border-color;
+}
+body.has-fc-cart-page .fc-cart table.fc-cart-items td.actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: $global-spacing-extra-small;
+	padding: 0 !important; // Needed to override theme styles
+}
+body.has-fc-cart-page .fc-cart table.fc-cart-items td.actions .coupon {
+	display: flex;
+	flex: 1 1 remsize( 26rem );
+	flex-wrap: nowrap;
+	gap: remsize( .5rem );
+	margin: 0;
+	padding: 0;
+	float: none;
+}
+body.has-fc-cart-page .fc-cart table.fc-cart-items td.actions .coupon .input-text {
+	flex: 1 1 auto;
+	box-sizing: border-box;
+	margin: 0;
+	min-width: 0;
+	width: auto;
+	float: none;
+}
+body.has-fc-cart-page .fc-cart table.fc-cart-items td.actions .button {
+	margin: 0;
+	float: none;
+	white-space: nowrap;
+}
+body.has-fc-cart-page .fc-cart table.fc-cart-items td.actions > .button[name="update_cart"] {
+	margin-#{ $alignment-left }: auto;
+}
+
+
+
+// Order summary
+body.has-fc-cart-page .fc-cart .wc-proceed-to-checkout {
+	margin: $global-spacing-small 0 0;
+	padding: 0;
+}
+body.has-fc-cart-page .fc-cart .wc-proceed-to-checkout .checkout-button {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	box-sizing: border-box;
+	margin: 0;
+	width: 100%;
+	text-align: center;
+}
+body.has-fc-cart-page .fc-cart .shipping-calculator-form {
+	margin-top: $global-spacing-extra-small;
+	text-align: $alignment-left;
+}
+body.has-fc-cart-page .fc-cart .fc-cart-sidebar-widgets {
+	margin: 0 0 $global-spacing-small;
+}
+
+
+
+// Cross-sells, theme layout
+body.has-fc-cart-page:not( .has-fc-cart-cross-sells--optimized ) .fc-cart .cross-sells {
+	float: none !important; // Needed to override theme styles
+	margin: 0 0 $global-spacing-small;
+	width: 100% !important; // Needed to override theme styles
+
+	@media (#{$bp-smaller-than-tablet}) {
+		margin-left: calc( -1 * #{ $container-spacing-mobile } );
+		margin-right: calc( -1 * #{ $container-spacing-mobile } );
+		width: calc( 100% + 2 * #{ $container-spacing-mobile } ) !important; // Needed to override theme styles
+	}
+}
+
+// Cross-sells, optimized layout
+body.has-fc-cart-page .fc-cart .fc-cart-section--cross-sells {
+	margin: 0 0 $global-spacing-small;
+}
+body.has-fc-cart-page .fc-cart ul.fc-cross-sells {
+	display: grid;
+	grid-template-columns: minmax( 0, 1fr );
+	gap: $global-spacing-extra-small;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+
+	@media (#{$bp-larger-than-tablet}) {
+		grid-template-columns: repeat( var( --fc-cross-sells-columns, 2 ), minmax( 0, 1fr ) );
+	}
+}
+body.has-fc-cart-page .fc-cart__sidebar ul.fc-cross-sells {
+	grid-template-columns: minmax( 0, 1fr );
+}
+body.has-fc-cart-page .fc-cart ul.fc-cross-sells li.fc-cross-sells__item {
+	display: flex;
+	align-items: flex-start;
+	gap: $global-spacing-extra-small;
+	margin: 0;
+	padding: 0;
+	width: auto;
+	float: none;
+	text-align: $alignment-left;
+}
+body.has-fc-cart-page .fc-cart .fc-cross-sells__image {
+	flex: 0 0 $_cart-item-image-width;
+}
+body.has-fc-cart-page .fc-cart .fc-cross-sells__image img {
+	display: block;
+	box-sizing: border-box;
+	margin: 0;
+	padding: $order-summary-image-padding;
+	width: 100%;
+	height: auto;
+	border: solid $order-summary-image-border-width $order-summary-image-border-color;
+	border-radius: $order-summary-image-border-radius;
+	background-color: $order-summary-image-background-color;
+}
+body.has-fc-cart-page .fc-cart .fc-cross-sells__details {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: remsize( .3rem );
+	min-width: 0;
+	font-size: $font-size-small;
+}
+body.has-fc-cart-page .fc-cart .fc-cross-sells__name {
+	font-weight: bold;
+	text-decoration: none;
+}
+body.has-fc-cart-page .fc-cart .fc-cross-sells__price {
+	color: $grey;
+	font-size: $font-size-extra-small;
+}
+body.has-fc-cart-page .fc-cart .fc-cross-sells__actions .button {
+	margin: remsize( .3rem ) 0 0;
+	padding: remsize( .6rem ) remsize( 1.2rem );
+	font-size: $font-size-extra-small;
+}
+body.has-fc-cart-page .fc-cart .fc-cross-sells__actions .added_to_cart {
+	display: block;
+	margin-top: remsize( .3rem );
+	font-size: $font-size-extra-small;
+}
+
+
+
+// Compatibility: Hungarian Pickup Points provider icons below the shipping method label
+body.has-fc-cart-page .fc-cart .vp-woo-pont-shipping-method-icons {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+	gap: remsize( .4rem );
+	margin-top: remsize( .3rem );
+}
+body.has-fc-cart-page .fc-cart .vp-woo-pont-pickup-location,
+body.has-fc-cart-page .fc-cart .vp-woo-pont-review-order-selected {
+	text-align: $alignment-right;
+}

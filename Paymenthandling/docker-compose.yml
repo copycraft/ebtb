@@ -1,0 +1,83 @@
+# Local WooCommerce checkout for the EBTB Next.js site — DUMMY payment only, nothing is charged.
+#   docker compose up -d
+#   docker compose run --rm wpcli bash /setup/setup.sh     (once; safe to re-run)
+# Store: http://localhost:8080   Admin: http://localhost:8080/wp-admin  (admin / admin)
+# See README.md.
+
+x-db-env: &db-env
+  WORDPRESS_DB_HOST: db
+  WORDPRESS_DB_NAME: wordpress
+  WORDPRESS_DB_USER: wp
+  WORDPRESS_DB_PASSWORD: wp
+  # The Next.js site the thank-you page links back to (no trailing slash).
+  WORDPRESS_CONFIG_EXTRA: |
+    define('EBTB_SITE_URL', getenv('EBTB_SITE_URL') ?: 'http://localhost:3000');
+    define('EBTB_REVALIDATE_URL', getenv('EBTB_REVALIDATE_URL') ?: '');
+    define('EBTB_REVALIDATE_SECRET', getenv('EBTB_REVALIDATE_SECRET') ?: '');
+    define('EBTB_FULL_ADMIN', (bool) getenv('EBTB_FULL_ADMIN'));
+  EBTB_SITE_URL: ${EBTB_SITE_URL:-http://localhost:3000}
+  # The Next.js server as seen from inside the container (for "products changed" pings).
+  EBTB_REVALIDATE_URL: ${EBTB_REVALIDATE_URL:-http://host.docker.internal:3000}
+  EBTB_REVALIDATE_SECRET: ${EBTB_REVALIDATE_SECRET:-}
+  EBTB_FULL_ADMIN: ${EBTB_FULL_ADMIN:-}
+
+x-wp-volumes: &wp-volumes
+  - wp:/var/www/html
+  - ./fluid-checkout:/var/www/html/wp-content/plugins/fluid-checkout
+  - ./hungarian-pickup-points-for-woocommerce:/var/www/html/wp-content/plugins/hungarian-pickup-points-for-woocommerce
+  # Whole folder, not single files: editors replace files (new inode) and single-file mounts go stale.
+  - ./mu-plugins:/var/www/html/wp-content/mu-plugins:ro
+  - ../docs:/opt/ebtb-docs:ro
+
+services:
+  db:
+    image: mariadb:11.4
+    environment:
+      MARIADB_DATABASE: wordpress
+      MARIADB_USER: wp
+      MARIADB_PASSWORD: wp
+      MARIADB_ROOT_PASSWORD: root
+    volumes:
+      - db:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      retries: 20
+
+  wordpress:
+    image: wordpress:php8.3-apache
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8080:80"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment: *db-env
+    volumes: *wp-volumes
+
+  # One-shot tooling container; shares the WordPress files. Runs as www-data (uid 33) like the web container.
+  wpcli:
+    image: wordpress:cli-php8.3
+    profiles: ["tools"]
+    user: "33:33"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - wordpress
+    environment:
+      <<: *db-env
+      WP_CLI_CACHE_DIR: /tmp/wp-cli-cache
+      HOME: /tmp
+    volumes:
+      - wp:/var/www/html
+      - ./fluid-checkout:/var/www/html/wp-content/plugins/fluid-checkout
+      - ./hungarian-pickup-points-for-woocommerce:/var/www/html/wp-content/plugins/hungarian-pickup-points-for-woocommerce
+      # Whole folder, not single files: editors replace files (new inode) and single-file mounts go stale.
+      - ./mu-plugins:/var/www/html/wp-content/mu-plugins:ro
+      - ../docs:/opt/ebtb-docs:ro
+      - ./setup:/setup:ro
+
+volumes:
+  db:
+  wp:

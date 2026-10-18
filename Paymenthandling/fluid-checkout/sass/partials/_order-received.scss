@@ -1,0 +1,303 @@
+// ------------------------------------
+// ORDER RECEIVED AND ORDER DETAILS
+// ------------------------------------
+$_order-details-max-width:            remsize( 76rem ) !default;
+$_order-received-icon-size:           remsize( 4.4rem ) !default;
+$_order-status-step-bar-height:       remsize( .5rem ) !default;
+
+
+
+// Layout width
+body.has-fc-order-received .fc-order-received {
+	box-sizing: border-box;
+	margin: 0 auto;
+	width: 100%;
+	max-width: $_order-details-max-width;
+	text-align: $alignment-left;
+}
+body.has-fc-order-received.has-fc-order-details--wide .fc-order-received {
+	max-width: none;
+}
+body.has-fc-order-received .fc-order-received *,
+body.has-fc-order-details .fc-order-status * {
+	box-sizing: border-box;
+}
+
+
+
+// Overview section
+body.has-fc-order-received .fc-order-received__heading {
+	display: flex;
+	align-items: center;
+	gap: $global-spacing-extra-small;
+	margin: 0 0 $global-spacing-extra-small;
+}
+body.has-fc-order-received .fc-order-received__icon {
+	position: relative;
+	flex: 0 0 $_order-received-icon-size;
+	width: $_order-received-icon-size;
+	height: $_order-received-icon-size;
+	border: solid remsize( .2rem ) $success-color;
+	border-radius: 50%;
+}
+// Check mark drawn with borders
+body.has-fc-order-received .fc-order-received__icon::after {
+	content: '';
+	position: absolute;
+	top: 46%;
+	left: 50%;
+	width: 28%;
+	height: 52%;
+	border: solid $success-color;
+	border-width: 0 remsize( .25rem ) remsize( .25rem ) 0;
+	transform: translate( -50%, -50% ) rotate( 45deg );
+}
+body.has-fc-order-received .fc-order-received__order-number {
+	display: block;
+	color: $grey;
+	font-size: $font-size-extra-small;
+	text-transform: uppercase;
+	letter-spacing: .02em;
+}
+body.has-fc-order-received h2.fc-order-received__title {
+	margin: 0;
+	padding: 0;
+	font-size: $font-size-medium;
+	font-weight: bold;
+	line-height: 1.2;
+}
+
+// Order received message
+body.has-fc-order-received .fc-order-received__overview .woocommerce-thankyou-order-received {
+	margin: 0 0 $global-spacing-extra-small;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	color: inherit;
+	font-size: $font-size-small;
+}
+body.has-fc-order-received .fc-order-received__overview .woocommerce-thankyou-order-received::before {
+	display: none;
+}
+
+// Overview list
+body.has-fc-order-received ul.fc-order-overview {
+	display: grid;
+	grid-template-columns: repeat( auto-fit, minmax( remsize( 16rem ), 1fr ) );
+	gap: $global-spacing-extra-small;
+	margin: 0;
+	padding: $global-spacing-extra-small 0 0;
+	border: 0;
+	border-top: solid remsize( .1rem ) $border-color;
+	background: transparent !important; // Needed to override theme styles
+	list-style: none;
+}
+body.has-fc-order-received ul.fc-order-overview::before,
+body.has-fc-order-received ul.fc-order-overview::after {
+	display: none;
+}
+body.has-fc-order-received ul.fc-order-overview li {
+	float: none;
+	margin: 0;
+	padding: 0;
+	border: 0;
+	color: $grey;
+	font-size: $font-size-extra-small;
+	text-transform: uppercase;
+	letter-spacing: .02em;
+}
+body.has-fc-order-received ul.fc-order-overview li strong {
+	display: block;
+	margin-top: remsize( .2rem );
+	color: $dark-grey;
+	font-size: $font-size-small;
+	text-transform: none;
+	letter-spacing: normal;
+	word-break: break-word;
+}
+
+
+
+// Payment instructions and order details sections
+body.has-fc-order-received .fc-order-received__details > p,
+body.has-fc-order-received .fc-order-received__details > ul,
+body.has-fc-order-received .fc-order-received__details .wc-bacs-bank-details,
+body.has-fc-order-details .woocommerce-order-details,
+body.has-fc-order-details .woocommerce-order-downloads,
+body.has-fc-order-details .woocommerce-customer-details {
+	@extend .fc-page-section;
+}
+body.has-fc-order-received .fc-order-received__details > ul,
+body.has-fc-order-received .fc-order-received__details .wc-bacs-bank-details {
+	list-style: none;
+}
+body.has-fc-order-received .fc-order-received__details .wc-bacs-bank-details-heading {
+	margin: $global-spacing-small 0 $global-spacing-extra-small;
+	font-size: $font-size-small;
+	text-transform: uppercase;
+}
+
+body.has-fc-order-details .woocommerce-order-details__title,
+body.has-fc-order-details .woocommerce-order-downloads__title,
+body.has-fc-order-details .woocommerce-customer-details .woocommerce-column__title,
+body.has-fc-order-details .woocommerce-customer-details > h2 {
+	@extend .fc-page-section__title;
+}
+
+
+
+// Order details table
+body.has-fc-order-details table.woocommerce-table--order-details {
+	margin: 0;
+	width: 100%;
+	border: 0;
+	border-collapse: collapse;
+	background-color: transparent;
+	font-size: $font-size-small;
+}
+body.has-fc-order-details table.woocommerce-table--order-details thead {
+	@extend %screen-reader-text-styles;
+}
+body.has-fc-order-details table.woocommerce-table--order-details tr,
+body.has-fc-order-details table.woocommerce-table--order-details th,
+body.has-fc-order-details table.woocommerce-table--order-details td {
+	background-color: transparent !important; // Needed to override theme styles
+}
+body.has-fc-order-details table.woocommerce-table--order-details th,
+body.has-fc-order-details table.woocommerce-table--order-details td {
+	padding: $global-spacing-extra-small 0;
+	border: 0;
+	border-top: solid $order-summary-cell-border-width--summary $order-summary-cell-border-color--summary;
+	vertical-align: top;
+	text-align: $alignment-left;
+}
+body.has-fc-order-details table.woocommerce-table--order-details td.product-total,
+body.has-fc-order-details table.woocommerce-table--order-details tfoot td {
+	text-align: $alignment-right;
+}
+body.has-fc-order-details table.woocommerce-table--order-details tbody tr:first-child td {
+	border-top: 0;
+}
+body.has-fc-order-details table.woocommerce-table--order-details tbody td.product-name {
+	font-weight: bold;
+}
+body.has-fc-order-details table.woocommerce-table--order-details tbody td.product-name .product-quantity {
+	font-weight: normal;
+}
+body.has-fc-order-details table.woocommerce-table--order-details tbody td.product-name .wc-item-meta {
+	margin: remsize( .3rem ) 0 0;
+	padding: 0;
+	color: $grey;
+	font-size: $font-size-extra-small;
+	font-weight: normal;
+	list-style: none;
+}
+body.has-fc-order-details table.woocommerce-table--order-details tbody td.product-name .wc-item-meta p {
+	display: inline;
+	margin: 0;
+}
+body.has-fc-order-details table.woocommerce-table--order-details tfoot tr:last-child th,
+body.has-fc-order-details table.woocommerce-table--order-details tfoot tr:last-child td {
+	font-weight: bold;
+}
+// Total row, which is the last row before the payment method, actions and note rows
+body.has-fc-order-details table.woocommerce-table--order-details tfoot tr:first-child th,
+body.has-fc-order-details table.woocommerce-table--order-details tfoot tr:first-child td {
+	border-top-width: $order-summary-cell-border-width--totals-top;
+	border-top-color: $order-summary-cell-border-color--totals-top;
+}
+body.has-fc-order-details table.woocommerce-table--order-details tfoot .order-actions-button {
+	margin: 0 0 remsize( .5rem ) remsize( .5rem );
+}
+// Mobile labels added by WooCommerce for responsive tables
+body.has-fc-order-details table.woocommerce-table--order-details td::before {
+	display: none !important; // Needed to override theme styles
+}
+
+
+
+// Customer details
+body.has-fc-order-details .woocommerce-customer-details .col2-set {
+	display: grid;
+	float: none !important; // Needed to override theme styles
+	grid-template-columns: minmax( 0, 1fr );
+	gap: $global-spacing-small;
+	margin: 0;
+	width: 100%;
+
+	@media (#{$bp-larger-than-tablet}) {
+		grid-template-columns: repeat( 2, minmax( 0, 1fr ) );
+	}
+}
+body.has-fc-order-details .woocommerce-customer-details .col2-set::before,
+body.has-fc-order-details .woocommerce-customer-details .col2-set::after {
+	display: none;
+}
+body.has-fc-order-details .woocommerce-customer-details .col2-set .col-1,
+body.has-fc-order-details .woocommerce-customer-details .col2-set .col-2 {
+	float: none;
+	margin: 0;
+	padding: 0;
+	width: auto;
+}
+body.has-fc-order-details .woocommerce-customer-details address {
+	margin: 0;
+	padding: 0;
+	border: 0;
+	font-size: $font-size-small;
+	font-style: normal;
+	line-height: 1.6;
+}
+body.has-fc-order-details .woocommerce-customer-details address p {
+	margin: remsize( .3rem ) 0 0;
+	padding: 0;
+}
+body.has-fc-order-details .woocommerce-customer-details address p::before {
+	display: none;
+}
+
+
+
+// Order status progress bar
+body.has-fc-order-details .fc-order-status {
+	margin: $global-spacing-small 0 0;
+}
+body.has-fc-order-details.woocommerce-view-order .fc-order-status,
+body.has-fc-order-details .woocommerce-MyAccount-content .fc-order-status {
+	margin: 0 0 $global-spacing-small;
+}
+body.has-fc-order-details .fc-order-status__label {
+	margin: 0 0 remsize( .8rem );
+	font-size: $font-size-small;
+}
+body.has-fc-order-details ol.fc-order-status__steps {
+	display: flex;
+	gap: remsize( .4rem );
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+body.has-fc-order-details .fc-order-status__step {
+	flex: 1 1 0;
+	margin: 0;
+	padding: calc( #{ $_order-status-step-bar-height } + #{ remsize( .6rem ) } ) 0 0;
+	border-top: solid $_order-status-step-bar-height $checkout-progress-bar-color;
+	color: $grey;
+	font-size: $font-size-extra-small;
+	line-height: 1.3;
+}
+body.has-fc-order-details .fc-order-status__step.is-complete,
+body.has-fc-order-details .fc-order-status__step.is-current {
+	border-top-color: $checkout-progress-bar-complete-color;
+	color: $dark-grey;
+}
+body.has-fc-order-details .fc-order-status__step.is-current {
+	font-weight: bold;
+}
+
+
+
+// Widget areas
+body.has-fc-order-received .fc-order-received-widgets {
+	margin: 0 0 $global-spacing-small;
+}

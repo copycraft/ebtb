@@ -1,0 +1,33 @@
+:root{
+  /* Display — Bagel Fat One, never below 32px, tracking always tight */
+  --type-display-xl:clamp(56px,9vw,132px);
+  --type-display-lg:clamp(44px,6vw,88px);
+  --type-display-md:56px;
+  --type-display-sm:36px;
+  --leading-display:0.92;
+  --tracking-display:-0.02em;
+
+  /* Headline — Archivo Expanded, uppercase */
+  --type-headline-lg:32px;
+  --type-headline-md:24px;
+  --type-headline-sm:18px;
+  --leading-headline:1.08;
+  --tracking-headline:-0.01em;
+
+  /* Body — Archivo */
+  --type-body-lg:19px;
+  --type-body-md:16px;
+  --type-body-sm:14px;
+  --leading-body:1.5;
+
+  /* Label / mono — uppercase, wide tracking, used on badges + nutrition data */
+  --type-label-md:13px;
+  --type-label-sm:11px;
+  --tracking-label:0.09em;
+  --tracking-label-wide:0.16em;
+
+  --weight-regular:400;
+  --weight-medium:500;
+  --weight-bold:700;
+  --weight-black:900;
+}

@@ -1,0 +1,95 @@
+// ------------------------------------
+// DESIGN TEMPLATE: MINIMALIST
+// Sections without boxes, separated only by lines.
+// Also used as the base for the split design template.
+// ------------------------------------
+
+
+
+:root body.has-fc-design-template--minimalist,
+:root body.has-fc-design-template--split {
+	--fluidcheckout--section--border-radius: 0;
+	--fluidcheckout--order-summary--cell-border-width--products: 0;
+	--fluidcheckout--order-summary--image-border-radius: #{ $global-radius-extra-small };
+}
+
+
+
+// Checkout steps without boxes
+body.has-fc-design-template--minimalist .fc-wrapper .fc-checkout-step,
+body.has-fc-design-template--split .fc-wrapper .fc-checkout-step {
+	border-left-width: 0;
+	border-right-width: 0;
+	background-color: transparent;
+
+	@media (#{$bp-larger-than-tablet}) {
+		border-top-width: 0;
+		border-bottom-width: 0;
+	}
+}
+
+body.has-fc-design-template--minimalist .fc-wrapper .fc-step__substep,
+body.has-fc-design-template--split .fc-wrapper .fc-step__substep {
+	@media (#{$bp-larger-than-tablet}) {
+		padding-left: 0;
+		padding-right: 0;
+	}
+}
+
+body.has-fc-design-template--minimalist .fc-wrapper .fc-checkout-step:first-child .fc-step__substep:first-of-type,
+body.has-fc-design-template--split .fc-wrapper .fc-checkout-step:first-child .fc-step__substep:first-of-type {
+	@media (#{$bp-larger-than-tablet}) {
+		border-top-width: 0;
+	}
+}
+
+body.has-fc-design-template--minimalist .fc-wrapper .fc-step__actions,
+body.has-fc-design-template--split .fc-wrapper .fc-step__actions,
+body.has-fc-design-template--minimalist .fc-wrapper .fc-place-order__section,
+body.has-fc-design-template--split .fc-wrapper .fc-place-order__section {
+	@media (#{$bp-larger-than-tablet}) {
+		padding-left: 0;
+		padding-right: 0;
+	}
+}
+
+
+
+// Order summary with a lighter frame
+body.has-fc-design-template--minimalist div.woocommerce .fc-wrapper .fc-checkout-order-review .fc-checkout-order-review__inner {
+	@media (#{$bp-larger-than-tablet}) {
+		border-radius: $global-radius-small;
+	}
+}
+
+
+
+// Cart and order received page sections without boxes
+body.has-fc-design-template--minimalist .fc-page-section:not( .fc-page-section--summary ),
+body.has-fc-design-template--split .fc-page-section:not( .fc-page-section--summary ),
+body.has-fc-design-template--minimalist.has-fc-order-details .woocommerce-order-details,
+body.has-fc-design-template--split.has-fc-order-details .woocommerce-order-details,
+body.has-fc-design-template--minimalist.has-fc-order-details .woocommerce-order-downloads,
+body.has-fc-design-template--split.has-fc-order-details .woocommerce-order-downloads,
+body.has-fc-design-template--minimalist.has-fc-order-details .woocommerce-customer-details,
+body.has-fc-design-template--split.has-fc-order-details .woocommerce-customer-details,
+body.has-fc-design-template--minimalist.has-fc-order-received .fc-order-received__details .wc-bacs-bank-details,
+body.has-fc-design-template--split.has-fc-order-received .fc-order-received__details .wc-bacs-bank-details {
+	border-color: transparent;
+	background-color: transparent;
+
+	@media (#{$bp-larger-than-tablet}) {
+		padding-left: 0;
+		padding-right: 0;
+		border-width: 0;
+		border-top-width: remsize( .1rem );
+		border-top-color: $border-color;
+		border-radius: 0;
+	}
+}
+
+body.has-fc-design-template--minimalist .fc-page-section--summary {
+	@media (#{$bp-larger-than-tablet}) {
+		border-radius: $global-radius-small;
+	}
+}

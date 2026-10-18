@@ -1,0 +1,70 @@
+:root{
+  /* ---- Base palette: named for the spice jar ---- */
+  --poppy-900:#140F1F;   /* poppy seed, near-black */
+  --poppy-800:#241C33;   /* ink — default text + borders */
+  --poppy-700:#3B2F57;
+  --poppy-500:#6B3FD4;   /* onion violet */
+  --poppy-300:#B79CF2;
+  --poppy-100:#E6DDFB;
+
+  --blaze-700:#B72C0C;   /* deep paprika, pressed states */
+  --blaze-600:#E03A12;
+  --blaze-500:#FF4A1E;   /* BLAZE — the primary brand red-orange */
+  --blaze-300:#FF8E6E;
+  --blaze-100:#FFDCD1;
+
+  --garlic-600:#D98A00;
+  --garlic-500:#F7A81B;  /* toasted garlic gold */
+  --garlic-300:#FFCB61;
+  --garlic-100:#FFEDC6;
+
+  --scallion-600:#6E9C24;
+  --scallion-500:#A8D45A; /* dried chive green */
+  --scallion-100:#EAF5D3;
+
+  --sesame-500:#E4D2B0;  /* toasted sesame */
+  --sesame-300:#F1E4CB;
+  --sesame-200:#F6ECD9;  /* primary page cream */
+  --salt-100:#FFFDF7;    /* salt white / paper */
+  --salt-000:#FFFFFF;
+
+  --grey-500:#8C8377;
+  --grey-300:#C9C1B4;
+
+  /* ---- Semantic aliases ---- */
+  --text-body:var(--poppy-800);
+  --text-muted:var(--grey-500);
+  --text-display:var(--poppy-800);
+  --text-on-blaze:var(--salt-100);
+  --text-on-ink:var(--sesame-200);
+  --text-link:var(--blaze-600);
+  --text-link-hover:var(--blaze-700);
+
+  --surface-page:var(--sesame-200);
+  --surface-card:var(--salt-100);
+  --surface-raised:var(--salt-000);
+  --surface-ink:var(--poppy-800);
+  --surface-blaze:var(--blaze-500);
+  --surface-garlic:var(--garlic-500);
+  --surface-onion:var(--poppy-500);
+  --surface-scallion:var(--scallion-500);
+  --surface-sunk:var(--sesame-300);
+
+  --border-strong:var(--poppy-800);
+  --border-soft:var(--sesame-500);
+  --border-blaze:var(--blaze-500);
+
+  --action-primary:var(--blaze-500);
+  --action-primary-hover:var(--blaze-600);
+  --action-primary-active:var(--blaze-700);
+  --focus-ring:var(--poppy-500);
+
+  --feedback-success:var(--scallion-600);
+  --feedback-success-surface:var(--scallion-100);
+  --feedback-warning:var(--garlic-600);
+  --feedback-warning-surface:var(--garlic-100);
+  --feedback-danger:var(--blaze-700);
+  --feedback-danger-surface:var(--blaze-100);
+  --feedback-info:var(--poppy-500);
+  --feedback-info-surface:var(--poppy-100);
+}

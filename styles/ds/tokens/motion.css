@@ -1,0 +1,10 @@
+:root{
+  --dur-fast:120ms; /* @kind other */
+  --dur-med:220ms; /* @kind other */
+  --dur-slow:420ms; /* @kind other */
+  --ease-snap:cubic-bezier(.2,.9,.25,1); /* @kind other */
+  --ease-pop:cubic-bezier(.34,1.56,.64,1); /* @kind other */
+  --ease-linear:linear; /* @kind other */
+  --marquee-dur:26s; /* @kind other */
+  --press-shift:2px;   /* translate on :active, shadow shrinks to match */
+}

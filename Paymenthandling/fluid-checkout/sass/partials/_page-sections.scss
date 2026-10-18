@@ -1,0 +1,147 @@
+// ------------------------------------
+// PAGE SECTIONS
+// Section boxes and titles for the cart and order received pages,
+// matching the styles of the checkout steps and order summary.
+// ------------------------------------
+.fc-page-section {
+	box-sizing: border-box;
+	margin: 0 0 $global-spacing-small;
+	padding: $global-spacing-small;
+	border: solid $checkout-step-border-width $checkout-step-border-color;
+	border-radius: $checkout-substep-border-radius;
+	background-color: $checkout-step-background-color;
+	text-align: $alignment-left;
+
+	@media (#{$bp-smaller-than-tablet}) {
+		margin-left: calc( -1 * #{ $container-spacing-mobile } );
+		margin-right: calc( -1 * #{ $container-spacing-mobile } );
+		border-left-width: 0;
+		border-right-width: 0;
+		border-radius: 0;
+	}
+}
+
+.fc-page-section--summary {
+	border: solid $order-summary-border-width $order-summary-border-color;
+	background-color: $order-summary-background-color;
+	box-shadow: $order-summary-box-shadow--large-screen;
+
+	@media (#{$bp-smaller-than-tablet}) {
+		border-left-width: 0;
+		border-right-width: 0;
+		border-radius: 0;
+	}
+}
+
+
+
+body .fc-page-section__title,
+body .fc-page-section h2.fc-page-section__title {
+	margin: 0 0 $global-spacing-extra-small;
+	padding: 0;
+	border: 0;
+	color: $checkout-substep-title-color;
+	font-size: $font-size-small;
+	font-weight: bold;
+	line-height: 1.2;
+	letter-spacing: normal;
+	text-transform: uppercase;
+	text-align: $alignment-left;
+}
+
+
+
+// Totals tables inside summary sections
+body .fc-page-section .fc-totals-table {
+	margin: 0;
+	width: 100%;
+	border: 0;
+	border-collapse: collapse;
+	background-color: transparent;
+	font-size: $font-size-small;
+}
+body .fc-page-section .fc-totals-table tbody,
+body .fc-page-section .fc-totals-table tfoot {
+	border: 0;
+}
+body .fc-page-section .fc-totals-table tr,
+body .fc-page-section .fc-totals-table th,
+body .fc-page-section .fc-totals-table td {
+	background-color: transparent !important; // Needed to override theme styles
+}
+// Keep table layout on mobile, which is changed by WooCommerce for responsive tables
+body .fc-page-section .fc-totals-table tr {
+	display: table-row !important; // Needed to override WooCommerce and theme styles
+}
+body .fc-page-section .fc-totals-table th,
+body .fc-page-section .fc-totals-table td {
+	display: table-cell !important; // Needed to override WooCommerce and theme styles
+}
+body .fc-page-section .fc-totals-table th,
+body .fc-page-section .fc-totals-table td {
+	padding: $global-spacing-extra-small 0;
+	border: 0;
+	border-top: solid $order-summary-cell-border-width--summary $order-summary-cell-border-color--summary;
+	font-weight: normal;
+	vertical-align: top;
+	text-align: $alignment-left;
+}
+body .fc-page-section .fc-totals-table td {
+	text-align: $alignment-right;
+}
+body .fc-page-section .fc-totals-table th {
+	font-weight: bold;
+}
+body .fc-page-section .fc-totals-table tr:first-child th,
+body .fc-page-section .fc-totals-table tr:first-child td {
+	border-top: 0;
+}
+// Mobile labels added by WooCommerce for responsive tables
+body .fc-page-section .fc-totals-table td::before {
+	display: none !important; // Needed to override theme styles
+}
+
+body .fc-page-section .fc-totals-table .order-total th,
+body .fc-page-section .fc-totals-table .order-total td {
+	padding-top: $global-spacing-extra-small + remsize( .5rem );
+	border-top-width: $order-summary-cell-border-width--totals-top;
+	border-top-color: $order-summary-cell-border-color--totals-top;
+	font-size: $font-size;
+	font-weight: bold;
+	text-transform: uppercase;
+}
+body .fc-page-section .fc-totals-table .order-total td small,
+body .fc-page-section .fc-totals-table .order-total td .includes_tax {
+	display: block;
+	font-size: $font-size-extra-small;
+	font-weight: normal;
+	text-transform: none;
+}
+body.has-highlighted-order-totals .fc-page-section .fc-totals-table .order-total th,
+body.has-highlighted-order-totals .fc-page-section .fc-totals-table .order-total td {
+	background-color: $order-summary-highlighted-total-background-color !important; // Needed to override theme styles
+}
+body.has-highlighted-order-totals .fc-page-section .fc-totals-table .order-total th {
+	padding-#{ $alignment-left }: $global-spacing-extra-small;
+}
+body.has-highlighted-order-totals .fc-page-section .fc-totals-table .order-total td {
+	padding-#{ $alignment-right }: $global-spacing-extra-small;
+}
+
+
+
+// Shipping methods inside totals tables
+body .fc-page-section .fc-totals-table #shipping_method {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+body .fc-page-section .fc-totals-table #shipping_method li {
+	margin: 0 0 remsize( .5rem );
+	padding: 0;
+	text-indent: 0;
+}
+body .fc-page-section .fc-totals-table .woocommerce-shipping-destination,
+body .fc-page-section .fc-totals-table .shipping-calculator-button {
+	font-size: $font-size-extra-small;
+}

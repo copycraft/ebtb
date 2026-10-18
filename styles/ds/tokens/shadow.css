@@ -1,0 +1,11 @@
+:root{
+  /* Hard offset "sticker" shadows — no blur, ever. Blur reads soft/corporate. */
+  --shadow-sticker-sm:2px 2px 0 var(--poppy-800);
+  --shadow-sticker:4px 4px 0 var(--poppy-800);
+  --shadow-sticker-lg:7px 7px 0 var(--poppy-800);
+  --shadow-sticker-blaze:4px 4px 0 var(--blaze-500);
+  --shadow-pressed:1px 1px 0 var(--poppy-800);
+  /* The only blurred shadow in the system: overlay dialogs lifting off the page. */
+  --shadow-overlay:0 24px 60px rgba(20,15,31,.28);
+  --scrim-ink:rgba(20,15,31,.55);
+}

@@ -1,0 +1,106 @@
+// ------------------------------------
+// DESIGN TEMPLATE: SPLIT
+// Same sections as the minimalist template, with the sidebar
+// displayed as a full height panel extending to the edge of the screen.
+// ------------------------------------
+$_split-panel-background-color:   var( --fluidcheckout--split--panel-background-color, #{ $lighter-grey } ) !default;
+$_split-panel-border-color:       var( --fluidcheckout--split--panel-border-color, #{ $border-color } ) !default;
+$_split-panel-spacing-top:        var( --fluidcheckout--split--panel-spacing-top, #{ $global-spacing } ) !default;
+$_split-panel-spacing-left:       var( --fluidcheckout--split--panel-spacing-left, #{ $global-spacing } ) !default;
+
+
+
+:root body.has-fc-design-template--split {
+	--fluidcheckout--order-summary--border-width: 0;
+	--fluidcheckout--order-summary--background-color: transparent;
+	--fluidcheckout--order-summary--image-background-color: #{ $white };
+}
+
+
+
+// Avoid horizontal scrolling caused by the panel extending to the edge of the screen
+body.has-fc-design-template--split {
+	@media (#{$bp-larger-than-desktop}) {
+		overflow-x: clip;
+	}
+}
+
+// Extend the panel up to the distraction free header, which is displayed above the panel
+body.has-fc-design-template--split.has-checkout-header {
+	--fluidcheckout--split--panel-spacing-top: 100vmax;
+}
+body.has-fc-design-template--split.has-checkout-header .fc-checkout-header {
+	@media (#{$bp-larger-than-desktop}) {
+		position: relative;
+	}
+}
+
+
+
+// Full height panel for the sidebar on large screens.
+// Uses a box shadow to paint the panel background beyond the sidebar boundaries,
+// which does not affect the page layout or scrolling area.
+body.has-fc-design-template--split .fc-wrapper .fc-sidebar,
+body.has-fc-design-template--split .fc-split-panel {
+	@media (#{$bp-larger-than-desktop}) {
+		position: relative;
+		background-color: $_split-panel-background-color;
+		box-shadow: 0 0 0 100vmax $_split-panel-background-color;
+		clip-path: inset( calc( -1 * #{ $_split-panel-spacing-top } ) -100vmax -100vmax calc( -1 * #{ $_split-panel-spacing-left } - #{ remsize( .1rem ) } ) ); // Extra pixel avoids gaps in the border line when the column position is not a round number
+	}
+}
+
+// Panel border line, painted with a box shadow beyond the sidebar boundaries to avoid affecting the scrolling area
+body.has-fc-design-template--split .fc-wrapper .fc-sidebar::before,
+body.has-fc-design-template--split .fc-split-panel::before {
+	@media (#{$bp-larger-than-desktop}) {
+		content: '';
+		position: absolute;
+		top: 0;
+		#{ $alignment-left }: calc( -1 * #{ $_split-panel-spacing-left } );
+		width: remsize( .1rem );
+		height: 100%;
+		box-shadow: 0 0 0 100vmax $_split-panel-border-color;
+		clip-path: inset( calc( -1 * #{ $_split-panel-spacing-top } ) 0 -100vmax 0 );
+		pointer-events: none;
+	}
+}
+
+
+
+// Order summary without frame inside the panel
+body.has-fc-design-template--split div.woocommerce .fc-wrapper .fc-checkout-order-review .fc-checkout-order-review__inner {
+	@media (#{$bp-larger-than-desktop}) {
+		border-radius: 0;
+		padding-left: 0;
+		padding-right: 0;
+		box-shadow: none;
+	}
+}
+
+// Use the minimalist frame on smaller screens
+body.has-fc-design-template--split div.woocommerce .fc-wrapper .fc-checkout-order-review .fc-checkout-order-review__inner {
+	@media (#{$bp-larger-than-tablet}) and (#{$bp-smaller-than-desktop}) {
+		border: solid remsize( .1rem ) $border-color;
+		border-radius: $global-radius-small;
+	}
+}
+
+
+
+// Cart and order received page summary without frame inside the panel
+body.has-fc-design-template--split .fc-split-panel .fc-page-section--summary {
+	@media (#{$bp-larger-than-desktop}) {
+		padding-left: 0;
+		padding-right: 0;
+		border-width: 0;
+		border-radius: 0;
+		box-shadow: none;
+	}
+}
+body.has-fc-design-template--split .fc-split-panel .fc-page-section--summary {
+	@media (#{$bp-larger-than-tablet}) and (#{$bp-smaller-than-desktop}) {
+		border: solid remsize( .1rem ) $border-color;
+		border-radius: $global-radius-small;
+	}
+}

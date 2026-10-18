@@ -1,0 +1,405 @@
+/* EBTB design system: tokens + global entry (copied from _ds/, unmodified). */
+@import "../styles/ds/styles.css";
+
+/* Font tokens → the next/font families loaded in app/layout.tsx (replaces the DS Google Fonts @import). */
+:root {
+  --font-display: var(--ff-bagel), var(--ff-archivo), system-ui, sans-serif;
+  --font-headline: var(--ff-archivo), system-ui, sans-serif;
+  --font-ui: var(--ff-archivo), system-ui, -apple-system, sans-serif;
+  --font-mono: var(--ff-dm-mono), ui-monospace, monospace;
+}
+
+/* ---- Page-level styles, ported from the <style> block of the .dc.html ---- */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #f6ecd9;
+  color: #241c33;
+  font-family: var(--font-ui);
+}
+
+a {
+  color: #ff4a1e;
+  text-decoration: none;
+}
+
+a:hover {
+  color: #241c33;
+}
+
+:focus-visible {
+  outline: 3px solid #6b3fd4;
+  outline-offset: 2px;
+}
+
+::selection {
+  background: #a8d45a;
+  color: #241c33;
+}
+
+html {
+  scroll-behavior: smooth;
+  scrollbar-color: #ff4a1e #f6ecd9;
+  scrollbar-width: thin;
+}
+
+::-webkit-scrollbar {
+  width: 14px;
+  height: 14px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f6ecd9;
+  border-left: 2px solid #241c33;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #ff4a1e;
+  border: 2px solid #241c33;
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #241c33;
+}
+
+::-webkit-scrollbar-corner {
+  background: #f6ecd9;
+}
+
+section[id] {
+  scroll-margin-top: 86px;
+}
+
+/* ---- Scroll reveal ----
+   Only hide content while reveals are enabled (body.ebtb-animate); with motion
+   off, or if JS never runs, everything renders visible. */
+.ebtb-animate [data-reveal] {
+  opacity: 0;
+  transform: translateY(26px);
+  transition:
+    opacity 0.5s cubic-bezier(0.2, 0.9, 0.25, 1),
+    transform 0.5s cubic-bezier(0.2, 0.9, 0.25, 1);
+}
+
+.ebtb-animate [data-reveal].in {
+  opacity: 1;
+  transform: none;
+}
+
+/* ---- Signature motion ---- */
+@keyframes ebtb-wobble {
+  0%,
+  100% {
+    transform: rotate(-6deg);
+  }
+  50% {
+    transform: rotate(4deg) translateY(-3px);
+  }
+}
+
+@keyframes ebtb-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-12px);
+  }
+}
+
+@keyframes ebtb-pop {
+  0% {
+    transform: scale(0.86) rotate(-3deg);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.04) rotate(1deg);
+    opacity: 1;
+  }
+  100% {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+@keyframes ebtb-fall {
+  0% {
+    transform: translateY(-14px) scale(0.6);
+    opacity: 0;
+  }
+  25% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(58px) scale(1);
+    opacity: 0;
+  }
+}
+
+/* One shared marquee loop; each <Marquee> only sets its own duration. */
+@keyframes ebtb-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-33.333%);
+  }
+}
+
+.ebtb-wobble {
+  animation: ebtb-wobble 4.5s ease-in-out infinite;
+  transform-origin: 50% 50%;
+}
+
+.ebtb-float {
+  animation: ebtb-float 7s ease-in-out infinite;
+}
+
+.ebtb-pop {
+  animation: ebtb-pop 0.6s cubic-bezier(0.2, 0.9, 0.25, 1) both;
+}
+
+.ebtb-seed {
+  animation: ebtb-fall 2.6s linear infinite;
+}
+
+.ebtb-marquee-track {
+  animation-name: ebtb-marquee;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+/* ---- Hover states (were style-hover attributes in the .dc.html) ---- */
+.ebtb-hover-cta {
+  display: inline-flex;
+  transition: transform 0.12s cubic-bezier(0.2, 0.9, 0.25, 1);
+}
+
+.ebtb-hover-cta:hover {
+  transform: translate(-3px, -3px) rotate(-1deg);
+}
+
+.ebtb-hover-figure {
+  transition: transform 0.22s cubic-bezier(0.2, 0.9, 0.25, 1);
+}
+
+.ebtb-hover-figure:hover {
+  transform: translate(-3px, -5px);
+}
+
+.ebtb-hover-tile {
+  transition: transform 0.22s cubic-bezier(0.2, 0.9, 0.25, 1);
+}
+
+.ebtb-hover-tile:hover {
+  transform: translate(-3px, -4px);
+}
+
+/* Recipe side-scroller: thin blaze thumb on a sesame track, like the page scrollbar. */
+.ebtb-carousel {
+  scrollbar-width: thin;
+  scrollbar-color: #ff4a1e #f1e4cb;
+  -webkit-overflow-scrolling: touch;
+}
+
+.ebtb-carousel::-webkit-scrollbar {
+  height: 10px;
+}
+
+.ebtb-carousel::-webkit-scrollbar-track {
+  background: #f1e4cb;
+  border-radius: 999px;
+}
+
+.ebtb-carousel::-webkit-scrollbar-thumb {
+  background: #ff4a1e;
+  border: 2px solid #241c33;
+  border-radius: 999px;
+}
+
+.ebtb-footer-link {
+  transition:
+    transform 0.12s cubic-bezier(0.2, 0.9, 0.25, 1),
+    color 0.12s cubic-bezier(0.2, 0.9, 0.25, 1);
+}
+
+.ebtb-footer-link:hover {
+  color: #f7a81b;
+  transform: translateX(4px);
+}
+
+
+/* ---- Site shell ---- */
+.ebtb-skip-link {
+  position: absolute;
+  left: 16px;
+  top: -80px;
+  z-index: 100;
+  padding: 10px 18px;
+  background: #241c33;
+  color: #f6ecd9;
+  border-radius: 999px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 12px;
+}
+
+.ebtb-skip-link:focus {
+  top: 12px;
+  color: #f6ecd9;
+}
+
+.ebtb-nav-link {
+  transition:
+    background 0.12s cubic-bezier(0.2, 0.9, 0.25, 1),
+    color 0.12s cubic-bezier(0.2, 0.9, 0.25, 1);
+}
+
+.ebtb-nav-link:not([aria-current="page"]):hover {
+  background: #241c33 !important;
+  color: #f6ecd9 !important;
+}
+
+.ebtb-nav-menu {
+  display: none;
+}
+
+@media (max-width: 860px) {
+  .ebtb-nav-links,
+  .ebtb-nav-cta {
+    display: none !important;
+  }
+
+  .ebtb-nav-menu {
+    display: inline-flex;
+  }
+}
+
+.ebtb-card-link:hover {
+  color: #ff4a1e !important;
+}
+
+/* The native checkbox is visually hidden; carry its focus ring onto the drawn box. */
+.ebtb-checkbox-input:focus-visible + span {
+  outline: 3px solid #6b3fd4;
+  outline-offset: 2px;
+}
+
+/* ---- Drawers (Radix Dialog) ---- */
+@keyframes ebtb-drawer-in {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: none;
+  }
+}
+
+@keyframes ebtb-scrim-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.ebtb-drawer[data-state="open"] {
+  animation: ebtb-drawer-in 0.22s cubic-bezier(0.2, 0.9, 0.25, 1);
+}
+
+.ebtb-scrim[data-state="open"] {
+  animation: ebtb-scrim-in 0.22s cubic-bezier(0.2, 0.9, 0.25, 1);
+}
+
+/* ---- Long-form text (recipes, legal pages) ---- */
+.ebtb-prose {
+  max-width: 68ch;
+  font-size: 17px;
+  line-height: 1.6;
+}
+
+.ebtb-prose h2 {
+  margin: 2.2em 0 0.5em;
+  font-family: var(--font-headline);
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  font-size: 20px;
+  line-height: 1.25;
+  scroll-margin-top: 24px;
+}
+
+.ebtb-prose h3 {
+  margin: 1.6em 0 0.4em;
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.ebtb-prose p,
+.ebtb-prose ul,
+.ebtb-prose ol {
+  margin: 0 0 1em;
+}
+
+.ebtb-prose li {
+  margin-bottom: 0.4em;
+}
+
+.ebtb-prose a {
+  color: var(--text-link);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.ebtb-prose a:hover {
+  color: var(--text-link-hover);
+}
+
+.ebtb-placeholder {
+  background: #ffedc6;
+  border-radius: 4px;
+  padding: 0 4px;
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .ebtb-animate [data-reveal] {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+
+  /* Motion-driven reveals (components/motion/Stagger.tsx): skip straight to the final state. */
+  [data-stagger-item] {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .ebtb-wobble,
+  .ebtb-float,
+  .ebtb-pop,
+  .ebtb-seed,
+  .ebtb-drawer,
+  .ebtb-scrim {
+    animation: none !important;
+  }
+
+  /* The design system asks for marquees to pause, not stop. */
+  .ebtb-marquee-track {
+    animation-play-state: paused;
+  }
+}
